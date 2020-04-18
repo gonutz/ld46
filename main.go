@@ -8,6 +8,14 @@ var (
 
 	tileSize = 64
 
+	handClosing = false
+	handFrame   = newFrameTimer(3).clamp(0, len(handCursors)-1)
+	handCursors = []string{
+		"open_hand_cursor.png",
+		"closing_hand_cursor_1.png",
+		"closing_hand_cursor_2.png",
+	}
+
 	// I want to try out a blue color palette for this game.
 	blue0 = rgb(255, 255, 255)
 	blue1 = rgb(200, 240, 255)
@@ -50,6 +58,18 @@ func main() {
 			}
 		}
 		window.DrawImageFile("door_tile.png", tileSize, windowH-3*tileSize)
+		window.DrawImageFile("draggable_tile.png", 5*tileSize, windowH-5*tileSize)
+		window.DrawImageFile("draggable_tile.png", 6*tileSize, windowH-5*tileSize)
+		window.DrawImageFile("draggable_tile.png", 7*tileSize, windowH-5*tileSize)
+
+		mx, my := window.MousePosition()
+		if window.IsMouseDown(draw.LeftButton) {
+			handFrame.inc()
+		} else {
+			handFrame.dec()
+		}
+		cursorFrame := clamp(handFrame.value(), 0, len(handCursors)-1)
+		window.DrawImageFile(handCursors[cursorFrame], mx-20, my-20)
 	})
 	check(err)
 }
@@ -72,4 +92,51 @@ func lerpColor(a, b draw.Color, t float32) draw.Color {
 		B: a.B*t + b.B*(1.0-t),
 		A: a.A*t + b.A*(1.0-t),
 	}
+}
+
+func clamp(a, min, max int) int {
+	if a < min {
+		a = min
+	}
+	if a > max {
+		a = max
+	}
+	return a
+}
+
+func newFrameTimer(div int) *frameTimer {
+	return &frameTimer{
+		divider:      div,
+		undividedMin: -9999999,
+		undividedMax: 9999999,
+	}
+}
+
+type frameTimer struct {
+	divider      int
+	undivided    int
+	undividedMin int
+	undividedMax int
+}
+
+func (t *frameTimer) clamp(min, max int) *frameTimer {
+	t.undividedMin = min * t.divider
+	t.undividedMax = max * t.divider
+	return t
+}
+
+func (t *frameTimer) inc() {
+	if t.undivided < t.undividedMax {
+		t.undivided++
+	}
+}
+
+func (t *frameTimer) dec() {
+	if t.undivided > t.undividedMin {
+		t.undivided--
+	}
+}
+
+func (t *frameTimer) value() int {
+	return t.undivided / t.divider
 }
