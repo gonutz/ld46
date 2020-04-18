@@ -62,15 +62,20 @@ var (
 	.          ooo          .
 	.                       .
 	.                       D
-	.                       .
+	s                       .
 	xxxxxxxxxxx   xxxxxxxxxxx
 	.         x^^^x         .
 	.         xxxxx         .
 	`)
+
+	speedX, speedY = 3, 0
+	player         = rect(0, 0, 48, 96)
 )
 
 func main() {
 	level := level1
+	player.x = level.playerX*tileSize + (tileSize-player.w)/2
+	player.y = level.playerY*tileSize + tileSize - player.h
 	err := draw.RunWindow(windowTitle, 800, 600, func(window draw.Window) {
 		if window.WasKeyPressed(draw.KeyEscape) {
 			window.Close()
@@ -94,15 +99,23 @@ func main() {
 			cameraY = (level.height - windowH) / 2
 		}
 
+		// Move the player.
+		func() {
+			dx := sign(speedX)
+			for i := 0; i < abs(speedX); i++ {
+				player.x += dx
+				for _, t := range level.tiles {
+					if t.solid() && overlap(player, t.bounds()) {
+						player.x -= dx
+						speedX = 0
+						return
+					}
+				}
+			}
+		}()
+
 		mx, my := world(window.MousePosition())
 		leftMouseDown := window.IsMouseDown(draw.LeftButton)
-
-		// Animate the hand opening/closing.
-		if leftMouseDown {
-			handFrame.inc()
-		} else {
-			handFrame.dec()
-		}
 
 		// If the player clicks on a draggable tile, start moving it.
 		if !leftMouseWasDown && leftMouseDown {
@@ -128,7 +141,8 @@ func main() {
 			newX := (x + sign(x)*tileSize/2) / tileSize
 			newY := (y + sign(y)*tileSize/2) / tileSize
 			t := level.tileAt(newX, newY)
-			if t == nil || t == movingTile {
+			if (t == nil || t == movingTile) &&
+				!overlap(player, rect(newX*tileSize, newY*tileSize, tileSize, tileSize)) {
 				movingTile.x = newX
 				movingTile.y = newY
 			}
@@ -162,14 +176,39 @@ func main() {
 			if movingTile == nil && t.image == tileDrag && t.contains(mx, my) {
 				image = tileHighlight
 			}
-			window.DrawImageFile(image, screenX(t.x*tileSize), screenY(t.y*tileSize))
+			window.DrawImageFile(
+				image,
+				screenX(t.x*tileSize),
+				screenY(t.y*tileSize),
+			)
+		}
+
+		// Draw player. TODO Have a real animation for the player.
+		window.FillRect(screenX(player.x), screenY(player.y), player.w, player.h, blue2)
+		window.DrawRect(screenX(player.x), screenY(player.y), player.w, player.h, blue5)
+
+		// Draw preview of the tile in movement.
+		if movingTile != nil {
+			window.DrawImageFile(
+				tilePreview,
+				screenX(mx)-previewDx,
+				screenY(my)-previewDy,
+			)
+		}
+
+		// Animate the hand opening/closing.
+		if leftMouseDown {
+			handFrame.inc()
+		} else {
+			handFrame.dec()
 		}
 
 		// Draw mouse cursor.
-		window.DrawImageFile(handCursors[handFrame.value()], screenX(mx)-20, screenY(my)-20)
-		if movingTile != nil {
-			window.DrawImageFile(tilePreview, screenX(mx)-previewDx, screenY(my)-previewDy)
-		}
+		window.DrawImageFile(
+			handCursors[handFrame.value()],
+			screenX(mx)-20,
+			screenY(my)-20,
+		)
 
 		leftMouseWasDown = leftMouseDown
 		cameraX += cameraDx
@@ -236,39 +275,41 @@ func (t *frameTimer) value() int {
 }
 
 func parseLevel(s string) *level {
-	var tiles []tile
+	var l level
 	y := 0
-	levelWidth := 0
 	for _, line := range strings.Split(s, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
-		if levelWidth == 0 {
-			levelWidth = len(line)
+		if l.width == 0 {
+			l.width = len(line)
 		}
-		if len(line) != levelWidth {
+		if len(line) != l.width {
 			panic("all lines in the level must have the same width")
 		}
 		for x, r := range line {
 			x := x
 			if image, ok := tileMapping[r]; ok {
-				tiles = append(tiles, tile{x: x, y: y, image: image})
+				l.tiles = append(l.tiles, tile{x: x, y: y, image: image})
+			}
+			if r == 's' {
+				l.playerX, l.playerY = x, y
 			}
 		}
 		y++
 	}
-	return &level{
-		tiles:  tiles,
-		width:  levelWidth * tileSize,
-		height: y * tileSize,
-	}
+	l.width *= tileSize
+	l.height = y * tileSize
+	return &l
 }
 
 type level struct {
-	tiles  []tile
-	width  int
-	height int
+	tiles   []tile
+	width   int
+	height  int
+	playerX int
+	playerY int
 }
 
 func (l *level) tileAt(x, y int) *tile {
@@ -288,6 +329,14 @@ type tile struct {
 func (t *tile) contains(x, y int) bool {
 	return x >= t.x*tileSize && x < (t.x+1)*tileSize &&
 		y >= t.y*tileSize && y < (t.y+1)*tileSize
+}
+
+func (t *tile) bounds() rectangle {
+	return rect(t.x*tileSize, t.y*tileSize, tileSize, tileSize)
+}
+
+func (t *tile) solid() bool {
+	return t != nil && t.image != tileDoor
 }
 
 func worldX(screenX int) int {
@@ -318,7 +367,17 @@ func sign(x int) int {
 	if x < 0 {
 		return -1
 	}
-	return 1
+	if x > 0 {
+		return 1
+	}
+	return 0
+}
+
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
 }
 
 func clamp(x, min, max int) int {
@@ -329,4 +388,17 @@ func clamp(x, min, max int) int {
 		x = max
 	}
 	return x
+}
+
+type rectangle struct {
+	x, y, w, h int
+}
+
+func rect(x, y, w, h int) rectangle {
+	return rectangle{x: x, y: y, w: w, h: h}
+}
+
+func overlap(a, b rectangle) bool {
+	return a.x < b.x+b.w && b.x < a.x+a.w &&
+		a.y < b.y+b.h && b.y < a.y+a.h
 }
