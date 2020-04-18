@@ -24,6 +24,12 @@ var (
 	movingTile           *tile
 	previewDx, previewDy int
 
+	cameraX, cameraY = -50, -200
+	cameraSpeed      = 10
+	// cameraMoveMargin is how close you have to be to the edge of the screen to
+	// move the camera.
+	cameraMoveMargin = 35
+
 	// I want to try out a blue color palette for this game.
 	blue0 = rgb(255, 255, 255)
 	blue1 = rgb(200, 240, 255)
@@ -41,24 +47,26 @@ var (
 	tileSolid     = "solid_tile.png"       // x
 	tileDrag      = "draggable_tile.png"   // o
 	tileDoor      = "door_tile.png"        // D
+	tileSpike     = "tile_spike.png"       // D
 	tileHighlight = "highlighted_tile.png" // only at runtime
-	tileMoving    = "highlighted_tile.png" // only at runtime
+	tileMoving    = "solid_tile.png"       // only at runtime
 	tilePreview   = "preview_tile.png"     // only at runtime
 
+	tileMapping = map[rune]string{
+		'x': tileSolid,
+		'o': tileDrag,
+		'D': tileDoor,
+		'^': tileSpike,
+	}
+
 	level1 = parseLevel(`
-	xxxxxxxxxxxxxxxxxxxxx
-	x        xxx        x
-	x                   x
-	x                   x
-	x                   x
-	x                   x
-	x                   x
-	x                   x
-	x        ooo        x
-	x                   x
-	x                   D
-	x                    
-	xxxxxxxxx   xxxxxxxxx
+	.          ooo          .
+	.                       .
+	.                       D
+	.                       .
+	xxxxxxxxxxx   xxxxxxxxxxx
+	.         x^^^x         .
+	.         xxxxx         .
 	`)
 )
 
@@ -75,15 +83,29 @@ func main() {
 		window.SetFullscreen(windowFullscreen)
 		windowW, windowH := window.Size()
 
-		// Handle input.
-		mx, my := window.MousePosition()
+		// Clamp the camera to the level boundaries.
+		cameraX = clamp(cameraX, 0, level.width-windowW)
+		cameraY = clamp(cameraY, 0, level.height-windowH)
+
+		// If the level is smaller than the screen, put it in the center.
+		if windowW >= level.width {
+			cameraX = (level.width - windowW) / 2
+		}
+		if windowH >= level.height {
+			cameraY = (level.height - windowH) / 2
+		}
+
+		mx, my := world(window.MousePosition())
 		leftMouseDown := window.IsMouseDown(draw.LeftButton)
+
 		// Animate the hand opening/closing.
 		if leftMouseDown {
 			handFrame.inc()
 		} else {
 			handFrame.dec()
 		}
+
+		// If the player clicks on a draggable tile, start moving it.
 		if !leftMouseWasDown && leftMouseDown {
 			for i, t := range level.tiles {
 				if t.image == tileDrag && t.contains(mx, my) {
@@ -94,13 +116,18 @@ func main() {
 				}
 			}
 		}
+
+		// If the player just stopped moving a tile, reset it.
 		if !leftMouseDown && movingTile != nil {
 			movingTile.image = tileDrag
 			movingTile = nil
 		}
+
+		// Move the currently dragged tile to the new mouse position.
 		if movingTile != nil {
-			newX := (mx - previewDx + tileSize/2) / tileSize
-			newY := (my - previewDy + tileSize/2) / tileSize
+			x, y := mx-previewDx, my-previewDy
+			newX := (x + sign(x)*tileSize/2) / tileSize
+			newY := (y + sign(y)*tileSize/2) / tileSize
 			t := level.tileAt(newX, newY)
 			if t == nil || t == movingTile {
 				movingTile.x = newX
@@ -108,11 +135,25 @@ func main() {
 			}
 		}
 
+		var cameraDx, cameraDy int
+		if screenX(mx) <= cameraMoveMargin {
+			cameraDx = -cameraSpeed
+		}
+		if screenX(mx) >= windowW-1-cameraMoveMargin {
+			cameraDx = cameraSpeed
+		}
+		if screenY(my) <= cameraMoveMargin {
+			cameraDy = -cameraSpeed
+		}
+		if screenY(my) >= windowH-1-cameraMoveMargin {
+			cameraDy = cameraSpeed
+		}
+
 		// Draw background sky as light blue gradient.
 		for y := 0; y < windowH; y++ {
 			window.DrawLine(
 				0, y, windowW, y,
-				lerpColor(blue1, blue2, float32(y)/float32(windowH-1)),
+				lerpColor(blue1, blue3, float32(y)/float32(windowH-1)),
 			)
 		}
 
@@ -122,16 +163,18 @@ func main() {
 			if movingTile == nil && t.image == tileDrag && t.contains(mx, my) {
 				image = tileHighlight
 			}
-			window.DrawImageFile(image, t.x*tileSize, t.y*tileSize)
+			window.DrawImageFile(image, screenX(t.x*tileSize), screenY(t.y*tileSize))
 		}
 
 		// Draw mouse cursor.
-		window.DrawImageFile(handCursors[handFrame.value()], mx-20, my-20)
+		window.DrawImageFile(handCursors[handFrame.value()], screenX(mx)-20, screenY(my)-20)
 		if movingTile != nil {
-			window.DrawImageFile(tilePreview, mx-previewDx, my-previewDy)
+			window.DrawImageFile(tilePreview, screenX(mx)-previewDx, screenY(my)-previewDy)
 		}
 
 		leftMouseWasDown = leftMouseDown
+		cameraX += cameraDx
+		cameraY += cameraDy
 	})
 	check(err)
 }
@@ -194,31 +237,39 @@ func (t *frameTimer) value() int {
 }
 
 func parseLevel(s string) *level {
-	mapping := map[rune]string{
-		'x': tileSolid,
-		'o': tileDrag,
-		'D': tileDoor,
-	}
 	var tiles []tile
 	y := 0
+	levelWidth := 0
 	for _, line := range strings.Split(s, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
+		if levelWidth == 0 {
+			levelWidth = len(line)
+		}
+		if len(line) != levelWidth {
+			panic("all lines in the level must have the same width")
+		}
 		for x, r := range line {
 			x := x
-			if image, ok := mapping[r]; ok {
+			if image, ok := tileMapping[r]; ok {
 				tiles = append(tiles, tile{x: x, y: y, image: image})
 			}
 		}
 		y++
 	}
-	return &level{tiles: tiles}
+	return &level{
+		tiles:  tiles,
+		width:  levelWidth * tileSize,
+		height: y * tileSize,
+	}
 }
 
 type level struct {
-	tiles []tile
+	tiles  []tile
+	width  int
+	height int
 }
 
 func (l *level) tileAt(x, y int) *tile {
@@ -238,4 +289,45 @@ type tile struct {
 func (t *tile) contains(x, y int) bool {
 	return x >= t.x*tileSize && x < (t.x+1)*tileSize &&
 		y >= t.y*tileSize && y < (t.y+1)*tileSize
+}
+
+func worldX(screenX int) int {
+	return screenX + cameraX
+}
+
+func worldY(screenY int) int {
+	return screenY + cameraY
+}
+
+func world(screenX, screenY int) (int, int) {
+	return worldX(screenX), worldY(screenY)
+}
+
+func screenX(worldX int) int {
+	return worldX - cameraX
+}
+
+func screenY(worldY int) int {
+	return worldY - cameraY
+}
+
+func screen(worldX, worldY int) (int, int) {
+	return screenX(worldX), screenY(worldY)
+}
+
+func sign(x int) int {
+	if x < 0 {
+		return -1
+	}
+	return 1
+}
+
+func clamp(x, min, max int) int {
+	if x < min {
+		x = min
+	}
+	if x > max {
+		x = max
+	}
+	return x
 }
