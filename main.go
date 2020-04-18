@@ -25,7 +25,7 @@ var (
 	previewDx, previewDy int
 
 	cameraX, cameraY = -50, -200
-	cameraSpeed      = 10
+	cameraSpeed      = 15
 	// cameraMoveMargin is how close you have to be to the edge of the screen to
 	// move the camera.
 	cameraMoveMargin = 35
@@ -59,17 +59,21 @@ var (
 	}
 
 	level1 = parseLevel(`
-	.          ooo          .
-	.                       .
-	.                       D
-	s                       .
-	xxxxxxxxxxx   xxxxxxxxxxx
-	.         x^^^x         .
-	.         xxxxx         .
+	x          o          x
+	x                     x
+	x                    Dx
+	xs                    x
+	xxxxxxxxxxx xxxxxxxxxxx
+	.         x^x         .
+	.         xxx         .
 	`)
 
-	speedX, speedY = 3, 0
-	player         = rect(0, 0, 48, 96)
+	speedX    = 3
+	speedY    = 0.0
+	gravity   = 0.35
+	maxSpeedY = 10.0
+	player    = rect(0, 0, 48, 96)
+	falling   = false
 )
 
 func main() {
@@ -100,6 +104,35 @@ func main() {
 		}
 
 		// Move the player.
+		playerOnGround := func() bool {
+			// NOTE Here we assume that the player is not wider than a tile.
+			// If the player gets wider than a tile we have to compare more
+			// tiles in x.
+			tx1 := toTile(player.x)
+			tx2 := toTile(player.x + player.w - 1)
+			ty := toTile(player.y + player.h)
+			return level.tileAt(tx1, ty).solid() || level.tileAt(tx2, ty).solid()
+		}
+		yDist := round(speedY)
+		doneInY := func() bool { return yDist == 0 }
+		move1inY := func() {
+			// TODO Handle upward movement and collisions.
+			player.y += sign(yDist)
+			yDist -= sign(yDist)
+			if playerOnGround() {
+				falling = false
+				yDist = 0
+				speedY = 0
+			}
+		}
+		fall := func() {
+			if !falling && !playerOnGround() {
+				// Increment y so we hit a tile if we move in x direction
+				// very fast.
+				player.y++
+				falling = true
+			}
+		}
 		func() {
 			dx := sign(speedX)
 			for i := 0; i < abs(speedX); i++ {
@@ -111,8 +144,21 @@ func main() {
 						return
 					}
 				}
+
+				move1inY()
 			}
 		}()
+		for !doneInY() {
+			move1inY()
+		}
+		fall()
+
+		if falling {
+			speedY += gravity
+			if speedY > maxSpeedY {
+				speedY = maxSpeedY
+			}
+		}
 
 		mx, my := world(window.MousePosition())
 		leftMouseDown := window.IsMouseDown(draw.LeftButton)
@@ -336,7 +382,8 @@ func (t *tile) bounds() rectangle {
 }
 
 func (t *tile) solid() bool {
-	return t != nil && t.image != tileDoor
+	return t != nil &&
+		(t.image == tileSolid || t.image == tileDrag || t.image == tileHighlight)
 }
 
 func worldX(screenX int) int {
@@ -401,4 +448,15 @@ func rect(x, y, w, h int) rectangle {
 func overlap(a, b rectangle) bool {
 	return a.x < b.x+b.w && b.x < a.x+a.w &&
 		a.y < b.y+b.h && b.y < a.y+a.h
+}
+
+func toTile(coord int) int {
+	return coord / tileSize
+}
+
+func round(x float64) int {
+	if x < 0 {
+		return int(x - 0.5)
+	}
+	return int(x + 0.5)
 }
