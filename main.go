@@ -6,6 +6,8 @@ var (
 	windowTitle      = "LD46"
 	windowFullscreen = true
 
+	tileSize = 64
+
 	// I want to try out a blue color palette for this game.
 	blue0 = rgb(255, 255, 255)
 	blue1 = rgb(200, 240, 255)
@@ -33,8 +35,14 @@ func main() {
 		window.SetFullscreen(windowFullscreen)
 		windowW, windowH := window.Size()
 
-		for i, c := range blues {
-			window.FillRect(0, i*windowH/len(blues), windowW, windowH/len(blues)+1, c)
+		for y := 0; y < windowH; y++ {
+			window.DrawLine(
+				0, y, windowW, y,
+				lerpColor(blue1, blue2, float32(y)/float32(windowH-1)),
+			)
+		}
+		for x := 0; x < 100; x++ {
+			window.DrawImageFile("solid_tile.png", x*tileSize, windowH-tileSize)
 		}
 	})
 	check(err)
@@ -49,4 +57,13 @@ func check(err error) {
 func rgb(r, g, b uint8) draw.Color {
 	const f = 1.0 / 255.0
 	return draw.RGB(float32(r)*f, float32(g)*f, float32(b)*f)
+}
+
+func lerpColor(a, b draw.Color, t float32) draw.Color {
+	return draw.Color{
+		R: a.R*t + b.R*(1.0-t),
+		G: a.G*t + b.G*(1.0-t),
+		B: a.B*t + b.B*(1.0-t),
+		A: a.A*t + b.A*(1.0-t),
+	}
 }
