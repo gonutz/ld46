@@ -44,13 +44,12 @@ var (
 		blue0, blue1, blue2, blue3, blue4, blue5, blue6, blue7, blue8,
 	}
 
-	tileSolid     = "solid_tile.png"       // x
-	tileDrag      = "draggable_tile.png"   // o
-	tileDoor      = "door_tile.png"        // D
-	tileSpike     = "tile_spike.png"       // D
-	tileHighlight = "highlighted_tile.png" // only at runtime
-	tileMoving    = "solid_tile.png"       // only at runtime
-	tilePreview   = "preview_tile.png"     // only at runtime
+	tileSolid     = "solid_tile.png"
+	tileDrag      = "draggable_tile.png"
+	tileDoor      = "door_tile.png"
+	tileSpike     = "tile_spike.png"
+	tileHighlight = "highlighted_tile.png"
+	tilePreview   = "preview_tile.png"
 
 	tileMapping = map[rune]string{
 		'x': tileSolid,
@@ -110,7 +109,7 @@ func main() {
 			for i, t := range level.tiles {
 				if t.image == tileDrag && t.contains(mx, my) {
 					movingTile = &level.tiles[i]
-					movingTile.image = tileMoving
+					movingTile.image = tileHighlight
 					previewDx = mx - t.x*tileSize
 					previewDy = my - t.y*tileSize
 				}
