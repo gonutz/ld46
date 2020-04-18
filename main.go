@@ -1,6 +1,10 @@
 package main
 
-import "github.com/gonutz/prototype/draw"
+import (
+	"strings"
+
+	"github.com/gonutz/prototype/draw"
+)
 
 var (
 	windowTitle      = "LD46"
@@ -16,6 +20,10 @@ var (
 		"closing_hand_cursor_2.png",
 	}
 
+	leftMouseWasDown     = false
+	movingTile           *tile
+	previewDx, previewDy int
+
 	// I want to try out a blue color palette for this game.
 	blue0 = rgb(255, 255, 255)
 	blue1 = rgb(200, 240, 255)
@@ -29,9 +37,33 @@ var (
 	blues = []draw.Color{
 		blue0, blue1, blue2, blue3, blue4, blue5, blue6, blue7, blue8,
 	}
+
+	tileSolid     = "solid_tile.png"       // x
+	tileDrag      = "draggable_tile.png"   // o
+	tileDoor      = "door_tile.png"        // D
+	tileHighlight = "highlighted_tile.png" // only at runtime
+	tileMoving    = "highlighted_tile.png" // only at runtime
+	tilePreview   = "preview_tile.png"     // only at runtime
+
+	level1 = parseLevel(`
+	xxxxxxxxxxxxxxxxxxxxx
+	x        xxx        x
+	x                   x
+	x                   x
+	x                   x
+	x                   x
+	x                   x
+	x                   x
+	x        ooo        x
+	x                   x
+	x                   D
+	x                    
+	xxxxxxxxx   xxxxxxxxx
+	`)
 )
 
 func main() {
+	level := level1
 	err := draw.RunWindow(windowTitle, 800, 600, func(window draw.Window) {
 		if window.WasKeyPressed(draw.KeyEscape) {
 			window.Close()
@@ -43,33 +75,63 @@ func main() {
 		window.SetFullscreen(windowFullscreen)
 		windowW, windowH := window.Size()
 
+		// Handle input.
+		mx, my := window.MousePosition()
+		leftMouseDown := window.IsMouseDown(draw.LeftButton)
+		// Animate the hand opening/closing.
+		if leftMouseDown {
+			handFrame.inc()
+		} else {
+			handFrame.dec()
+		}
+		if !leftMouseWasDown && leftMouseDown {
+			for i, t := range level.tiles {
+				if t.image == tileDrag && t.contains(mx, my) {
+					movingTile = &level.tiles[i]
+					movingTile.image = tileMoving
+					previewDx = mx - t.x*tileSize
+					previewDy = my - t.y*tileSize
+				}
+			}
+		}
+		if !leftMouseDown && movingTile != nil {
+			movingTile.image = tileDrag
+			movingTile = nil
+		}
+		if movingTile != nil {
+			newX := (mx - previewDx + tileSize/2) / tileSize
+			newY := (my - previewDy + tileSize/2) / tileSize
+			t := level.tileAt(newX, newY)
+			if t == nil || t == movingTile {
+				movingTile.x = newX
+				movingTile.y = newY
+			}
+		}
+
+		// Draw background sky as light blue gradient.
 		for y := 0; y < windowH; y++ {
 			window.DrawLine(
 				0, y, windowW, y,
 				lerpColor(blue1, blue2, float32(y)/float32(windowH-1)),
 			)
 		}
-		for x := 0; x < 100; x++ {
-			window.DrawImageFile("solid_tile.png", x*tileSize, windowH-tileSize)
-		}
-		for x := 0; x < 2; x++ {
-			for y := 0; y < 100; y++ {
-				window.DrawImageFile("solid_tile.png", x*tileSize, windowH-(y*tileSize))
-			}
-		}
-		window.DrawImageFile("door_tile.png", tileSize, windowH-3*tileSize)
-		window.DrawImageFile("draggable_tile.png", 5*tileSize, windowH-5*tileSize)
-		window.DrawImageFile("draggable_tile.png", 6*tileSize, windowH-5*tileSize)
-		window.DrawImageFile("draggable_tile.png", 7*tileSize, windowH-5*tileSize)
 
-		mx, my := window.MousePosition()
-		if window.IsMouseDown(draw.LeftButton) {
-			handFrame.inc()
-		} else {
-			handFrame.dec()
+		// Draw tiles.
+		for _, t := range level.tiles {
+			image := t.image
+			if movingTile == nil && t.image == tileDrag && t.contains(mx, my) {
+				image = tileHighlight
+			}
+			window.DrawImageFile(image, t.x*tileSize, t.y*tileSize)
 		}
-		cursorFrame := clamp(handFrame.value(), 0, len(handCursors)-1)
-		window.DrawImageFile(handCursors[cursorFrame], mx-20, my-20)
+
+		// Draw mouse cursor.
+		window.DrawImageFile(handCursors[handFrame.value()], mx-20, my-20)
+		if movingTile != nil {
+			window.DrawImageFile(tilePreview, mx-previewDx, my-previewDy)
+		}
+
+		leftMouseWasDown = leftMouseDown
 	})
 	check(err)
 }
@@ -92,16 +154,6 @@ func lerpColor(a, b draw.Color, t float32) draw.Color {
 		B: a.B*t + b.B*(1.0-t),
 		A: a.A*t + b.A*(1.0-t),
 	}
-}
-
-func clamp(a, min, max int) int {
-	if a < min {
-		a = min
-	}
-	if a > max {
-		a = max
-	}
-	return a
 }
 
 func newFrameTimer(div int) *frameTimer {
@@ -139,4 +191,51 @@ func (t *frameTimer) dec() {
 
 func (t *frameTimer) value() int {
 	return t.undivided / t.divider
+}
+
+func parseLevel(s string) *level {
+	mapping := map[rune]string{
+		'x': tileSolid,
+		'o': tileDrag,
+		'D': tileDoor,
+	}
+	var tiles []tile
+	y := 0
+	for _, line := range strings.Split(s, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		for x, r := range line {
+			x := x
+			if image, ok := mapping[r]; ok {
+				tiles = append(tiles, tile{x: x, y: y, image: image})
+			}
+		}
+		y++
+	}
+	return &level{tiles: tiles}
+}
+
+type level struct {
+	tiles []tile
+}
+
+func (l *level) tileAt(x, y int) *tile {
+	for i, t := range l.tiles {
+		if x == t.x && y == t.y {
+			return &l.tiles[i]
+		}
+	}
+	return nil
+}
+
+type tile struct {
+	x, y  int
+	image string
+}
+
+func (t *tile) contains(x, y int) bool {
+	return x >= t.x*tileSize && x < (t.x+1)*tileSize &&
+		y >= t.y*tileSize && y < (t.y+1)*tileSize
 }
