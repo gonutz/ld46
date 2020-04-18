@@ -44,6 +44,12 @@ func main() {
 		for x := 0; x < 100; x++ {
 			window.DrawImageFile("solid_tile.png", x*tileSize, windowH-tileSize)
 		}
+		for x := 0; x < 2; x++ {
+			for y := 0; y < 100; y++ {
+				window.DrawImageFile("solid_tile.png", x*tileSize, windowH-(y*tileSize))
+			}
+		}
+		window.DrawImageFile("door_tile.png", tileSize, windowH-3*tileSize)
 	})
 	check(err)
 }
