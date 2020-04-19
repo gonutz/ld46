@@ -202,14 +202,14 @@ var (
 		`
 	.                     .
 	.                     .
-	.           (   )     .
+	.                     .
 	.                     .
 	.                     .
 	. s                   .
-	. >xxxxxxxxxxx        .
+	. >xxxxxxxxxxx(       .
 	.                     .
 	.                     .
-	.              xxxxxx .
+	.             )xxxxxx .
 	.                     .
 	.                     .
 	.       xxxxxx        .
@@ -280,7 +280,7 @@ var (
 	. >    oo     D .
 	. .             .
 	. .           x .
-	. .   x^x     x .
+	. .   x^      x .
 	. x|||||||||||x .
 	. xxxxxxxxxxxxx .
 	.               .
@@ -297,6 +297,7 @@ var (
 	maxSpeedY = 15.0
 	player    = rect(0, 0, 48, 96)
 	falling   = false
+	firstTurn = true
 
 	noCue        = 0
 	cueMoveLeft  = 1
@@ -354,6 +355,8 @@ func main() {
 		speedX = 0
 		speedY = 0.0
 		falling = false
+		firstTurn = true
+		fmt.Println(firstTurn)
 	}
 
 	previousLevel := func() {
@@ -431,6 +434,7 @@ func main() {
 			t := level.tileAt(toTile(player.x+player.w/2), toTile(player.y))
 			if t != nil && t.kind == tileDoor {
 				nextLevel()
+				window.PlaySoundFile("assets/walk_through_door.wav")
 			}
 			levelLost++
 		}
@@ -496,6 +500,7 @@ func main() {
 				player.y++
 				yDist = 0
 				speedY = 0
+				window.PlaySoundFile("assets/hit_ceiling.wav")
 			}
 		}
 		fall := func() {
@@ -511,8 +516,18 @@ func main() {
 			switch cue {
 			case cueMoveLeft:
 				speedX = -5
+				player.x--
+				if !firstTurn {
+					window.PlaySoundFile("assets/turn_around.wav")
+				}
+				firstTurn = false
 			case cueMoveRight:
 				speedX = 5
+				player.x++
+				if !firstTurn {
+					window.PlaySoundFile("assets/turn_around.wav")
+				}
+				firstTurn = false
 			case cueJump:
 				speedY = -11
 				window.PlaySoundFile("assets/jump.wav")
