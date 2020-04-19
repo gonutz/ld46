@@ -156,20 +156,20 @@ var (
 	`,
 
 		`
-	s       .
-	>       .
-	.       .
-	.       .
-	.  <    .
-	.    ooo.
-	.       .
-	>   oooo.
-	.       .
-	.       .
-	.  x^x  .
+	s           .
+	>           .
+	.           .
+	.           .
+	.  <        .
+	.           .
+	.           .
+	>   oo      .
+	.           D
+	.           .
+	.  x^x      x
 	`,
 	}
-	levelIndex = 5
+	levelIndex = 0
 	levelLost  = 0 // Call isLevelLost() to see if the level was lost.
 	lostTimer  = 0
 
