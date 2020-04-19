@@ -3,16 +3,15 @@
 set GOOS=linux
 set GOARCH=386
 
-go get github.com/gonutz/ico/cmd/ico
-ico assets/open_hand_cursor.png icon.ico
+go build ./vendor/github.com/gonutz/ico/cmd/ico
+go build ./vendor/github.com/gonutz/rsrc
+go build ./vendor/github.com/gonutz/blob/cmd/blob
+go build ./vendor/github.com/gonutz/payload/cmd/payload
 
-go get github.com/gonutz/rsrc
+ico assets/open_hand_cursor.png icon.ico
 rsrc -ico icon.ico
 
 go build -tags sdl2 -ldflags="-s -w" -o LD46
 
-go get github.com/gonutz/blob/cmd/blob
 blob -path=assets -out=assets.blob
-
-go get github.com/gonutz/payload/cmd/payload
 payload -data=assets.blob -exe=LD46
