@@ -57,75 +57,107 @@ var (
 	tileSpike    tileType = 8
 
 	tileTypeToImage = map[tileType]string{
-		tileSolid:    "tile_solid.png",
-		tileLeft:     "tile_left.png",
-		tileRight:    "tile_right.png",
-		tileJump:     "tile_jump.png",
-		tileDrag:     "tile_draggable.png",
-		tileJumpDrag: "tile_jump_draggable.png",
-		tileDoor:     "tile_door.png",
-		tileSpike:    "tile_spike.png",
+		tileSolid: "tile_solid",
+		tileLeft:  "tile_left",
+		tileRight: "tile_right",
+		tileJump:  "tile_jump",
+		tileDoor:  "tile_door",
+		tileSpike: "tile_spike",
 	}
+
+	leftCue  = cue{speedX: -5}
+	rightCue = cue{speedX: 5}
+	jumpCue  = cue{speedY: -11}
 
 	tilePreview = "tile_preview.png"
 
-	tileMapping = map[rune]tileType{
-		'x': tileSolid,
-		'<': tileLeft,
-		'>': tileRight,
-		'^': tileJump,
-		'Z': tileJumpDrag,
-		'o': tileDrag,
-		'D': tileDoor,
-		'|': tileSpike,
+	tileMapping = map[rune]tile{
+		'x': tile{kind: tileSolid, isSolid: true},
+		'<': tile{kind: tileLeft, isSolid: true},
+		'>': tile{kind: tileRight, isSolid: true},
+		'^': tile{kind: tileJump, isSolid: true},
+		'Z': tile{kind: tileJump, isSolid: true, isDraggable: true},
+		'o': tile{kind: tileSolid, isSolid: true, isDraggable: true},
+		'D': tile{kind: tileDoor},
+		'|': tile{kind: tileSpike},
 	}
 
 	levels = []string{
 		`
-	xs              x
-	x               x
-	x               x
-	x              Dx
-	x               x
-	x>xxxxxxxxxxxxxxx
+	.            Dx
+	s             x
+	>xxxxxxxxxxxxxx
 	`,
 
 		`
-	xs              x
-	x               x
-	x               x
-	x              Dx
-	x       o       x
-	x>xxxxxxxxxxxxxxx
+	.            Dx
+	s           o x
+	>xxxxxxxxxxxxxx
 	`,
 
 		`
-	xs              x
-	x               x
-	x               x
-	x            D  x
-	x       o       x
-	x>xxxxxxxxxxxxxxx
+	.            D.
+	s           o .
+	>xxxxxxxxxxxxxx
 	`,
 
 		`
-	x                     x
-	x          o          x
-	x                     x
-	x                    Dx
-	xs                    x
-	x>xxxxxxxxx xxxxxxxxxxx
-	.         x|x         .
-	.         xxx         .
+	s         ooo  .
+	.              .
+	.             Dx
+	.              x
+	>xxxxxxxxx   xxx
+	.        x|||x .
+	.        xxxxx .
 	`,
 
 		`
-	x                     x
-	x          Z          x
-	x                     x
-	x                    Dx
-	xs                    x
-	x>xxxxxxxxxo<xxxxxxxxxx
+	s          o   .
+	.              .
+	.             Dx
+	.              x
+	>xxxxxxxxx   xxx
+	.        x|||x .
+	.        xxxxx .
+	`,
+
+		`
+	s              .
+	.         Z    .
+	.             Dx
+	.              x
+	>xxxxxxx     xxx
+	.      x|||||x .
+	.      xxxxxxx .
+	`,
+
+		`
+	s              x
+	.         Z    x
+	.             Dx
+	.              x
+	>xxxxxx      xxx
+	.     x||||||x .
+	.     xxxxxxxx .
+	`,
+
+		`
+	s              .
+	.         Z    .
+	.             Dx
+	.              x
+	>xxxxxx      xxx
+	.     x||||||x .
+	.     xxxxxxxx .
+	`,
+
+		`
+	.                     x
+	.          Z          x
+	.                     x
+	.                    Dx
+	s                     x
+	>xxxxxxxxxxo<<<<<<<xxxx
 	.         xxx         .
 	`,
 
@@ -165,17 +197,19 @@ var (
 	`,
 
 		`
-	s           .
-	>           .
-	.           .
-	.           .
-	.  <        .
-	.           .
-	.           .
-	>   oo      .
-	.           D
-	.           .
-	.  x^x      x
+	.s           .
+	.>           .
+	..           .
+	..           .
+	..   ^x^xx<  .
+	..           .
+	..           .
+	.>    oo     D
+	..           .
+	..           x
+	..   x^x     x
+	.x|||||||||||x
+	.xxxxxxxxxxxxx
 	`,
 	}
 	levelIndex = 0
@@ -184,8 +218,8 @@ var (
 
 	speedX    = 0
 	speedY    = 0.0
-	gravity   = 0.35
-	maxSpeedY = 10.0
+	gravity   = 0.36
+	maxSpeedY = 15.0
 	player    = rect(0, 0, 48, 96)
 	falling   = false
 )
@@ -220,6 +254,11 @@ func main() {
 		level = nil
 	}
 
+	toggleFullscreen := func() {
+		windowFullscreen = !windowFullscreen
+		centerCamera = true
+	}
+
 	err := draw.RunWindow(windowTitle, 1000, 600, func(window draw.Window) {
 		// Some keys are handled right on top before the frame gets drawn, to be
 		// most responsive.
@@ -231,10 +270,8 @@ func main() {
 		}
 
 		// Toggle fullscreen and center the camera on the player afterwards.
-		if window.WasKeyPressed(draw.KeyEnter) &&
-			(window.IsKeyDown(draw.KeyLeftAlt) || window.IsKeyDown(draw.KeyRightAlt)) {
-			windowFullscreen = !windowFullscreen
-			centerCamera = true
+		if window.WasKeyPressed(draw.KeyF11) {
+			toggleFullscreen()
 		}
 		window.SetFullscreen(windowFullscreen)
 		windowW, windowH := window.Size()
@@ -465,6 +502,66 @@ func main() {
 			)
 		}
 
+		// Draw texts at the top: which level are we in, what keyboard controls
+		// are there.
+		const textScale = 1.6
+		textY := 15
+		textBackground := blue3
+		textBackground.A = 0.5
+
+		wasLeftClicked := false
+		for _, c := range window.Clicks() {
+			if c.Button == draw.LeftButton {
+				wasLeftClicked = true
+			}
+		}
+
+		{
+			text := fmt.Sprintf("Level %d/%d", levelIndex+1, len(levels))
+			textW, textH := window.GetScaledTextSize(text, textScale)
+			textX := 5
+			window.FillRect(textX-5, textY-5, textW+10, textH+10, textBackground)
+			window.DrawScaledText(text, textX, textY, textScale, blue8)
+		}
+
+		{
+			if isLevelLost() {
+				lostTimer++
+			}
+			textScale := textScale + float32(30-abs(lostTimer%60-30))/15
+			text := "Restart (F2)"
+			textW, textH := window.GetScaledTextSize(text, textScale)
+			textX := (windowW - textW) / 2
+			window.FillRect(textX-5, textY-5, textW+10, textH+10, textBackground)
+			if rect(
+				textX-5, textY-5, textW+10, textH+10,
+			).contains(screenX(mx), screenY(my)) {
+				window.FillRect(textX-5, textY-5, textW+10, textH+10, blue2)
+				window.DrawRect(textX-5, textY-5, textW+10, textH+10, blue1)
+				if wasLeftClicked {
+					startLevel()
+				}
+			}
+			window.DrawScaledText(text, textX, textY, textScale, blue8)
+		}
+
+		{
+			text := "Fullscreen (F11)"
+			textW, textH := window.GetScaledTextSize(text, textScale)
+			textX := windowW - textW - 5
+			window.FillRect(textX-5, textY-5, textW+10, textH+10, textBackground)
+			if rect(
+				textX-5, textY-5, textW+10, textH+10,
+			).contains(screenX(mx), screenY(my)) {
+				window.FillRect(textX-5, textY-5, textW+10, textH+10, blue2)
+				window.DrawRect(textX-5, textY-5, textW+10, textH+10, blue1)
+				if wasLeftClicked {
+					toggleFullscreen()
+				}
+			}
+			window.DrawScaledText(text, textX, textY, textScale, blue8)
+		}
+
 		// Animate the hand opening/closing.
 		if leftMouseDown {
 			handFrame.inc()
@@ -478,40 +575,6 @@ func main() {
 			screenX(mx)-20,
 			screenY(my)-20,
 		)
-
-		// Draw texts at the top: which level are we in, what keyboard controls
-		// are there.
-		const textScale = 1.6
-		textBackground := blue3
-		textBackground.A = 0.5
-
-		{
-			text := fmt.Sprintf("Level %d/%d", levelIndex+1, len(levels))
-			textW, textH := window.GetScaledTextSize(text, textScale)
-			textX := 5
-			window.FillRect(textX-5, 0, textW+10, textH+10, textBackground)
-			window.DrawScaledText(text, textX, 5, textScale, blue8)
-		}
-
-		{
-			if isLevelLost() {
-				lostTimer++
-			}
-			textScale := textScale + float32(30-abs(lostTimer%60-30))/15
-			text := "F2: restart level"
-			textW, textH := window.GetScaledTextSize(text, textScale)
-			textX := (windowW - textW) / 2
-			window.FillRect(textX-5, 0, textW+10, textH+10, textBackground)
-			window.DrawScaledText(text, textX, 5, textScale, blue8)
-		}
-
-		{
-			text := "Alt+Enter: toggle fullscreen"
-			textW, textH := window.GetScaledTextSize(text, textScale)
-			textX := windowW - textW - 5
-			window.FillRect(textX-5, 0, textW+10, textH+10, textBackground)
-			window.DrawScaledText(text, textX, 5, textScale, blue8)
-		}
 
 		// Update the frame information. These should always be at the end of
 		// the frame.
@@ -595,39 +658,14 @@ func parseLevel(s string) *level {
 		}
 		for x, r := range line {
 			x := x
-			if kind, ok := tileMapping[r]; ok {
-				l.tiles = append(l.tiles, tile{
-					x:           x,
-					y:           y,
-					kind:        kind,
-					isSolid:     !(kind == tileSpike || kind == tileDoor),
-					isDraggable: kind == tileDrag || kind == tileJumpDrag,
-				})
+			if t, ok := tileMapping[r]; ok {
+				t.x = x
+				t.y = y
+				l.tiles = append(l.tiles, t)
 			}
 			switch r {
 			case 's':
 				l.playerX, l.playerY = x, y
-			case '<':
-				l.cues = append(l.cues, cue{
-					x:      x*tileSize + tileSize/2,
-					y:      y * tileSize,
-					speedX: -3,
-					speedY: 0.0,
-				})
-			case '>':
-				l.cues = append(l.cues, cue{
-					x:      x*tileSize + tileSize/2,
-					y:      y * tileSize,
-					speedX: 3,
-					speedY: 0.0,
-				})
-			case '^':
-				l.cues = append(l.cues, cue{
-					x:      x*tileSize + tileSize/2,
-					y:      y * tileSize,
-					speedX: 0,
-					speedY: -14.0,
-				})
 			}
 		}
 		y++
@@ -639,7 +677,6 @@ func parseLevel(s string) *level {
 
 type level struct {
 	tiles   []tile
-	cues    []cue
 	width   int
 	height  int
 	playerX int
@@ -656,9 +693,21 @@ func (l *level) tileAt(x, y int) *tile {
 }
 
 func (l *level) cueAt(x, y int) *cue {
-	for i, c := range l.cues {
-		if x == c.x && y == c.y {
-			return &l.cues[i]
+	// +9999 is to make sure modulo works for negative x and y values.
+	if (x+9999*tileSize)%tileSize == tileSize/2 &&
+		(y+9999*tileSize)%tileSize == 0 {
+		t := l.tileAt(toTile(x), toTile(y))
+		if t == nil {
+			return nil
+		}
+		if t.kind == tileLeft {
+			return &leftCue
+		}
+		if t.kind == tileRight {
+			return &rightCue
+		}
+		if t.kind == tileJump {
+			return &jumpCue
 		}
 	}
 	return nil
@@ -676,10 +725,13 @@ type tileType int
 
 func (t *tile) image() string {
 	s := tileTypeToImage[t.kind]
-	if t.highlighted {
-		s = strings.TrimSuffix(s, ".png") + "_highlight.png"
+	if t.isDraggable {
+		s += "_draggable"
 	}
-	return s
+	if t.highlighted {
+		s += "_highlight"
+	}
+	return s + ".png"
 }
 
 func (t *tile) contains(x, y int) bool {
@@ -700,7 +752,6 @@ func (t *tile) draggable() bool {
 }
 
 type cue struct {
-	x, y   int
 	speedX int
 	speedY float64
 }
@@ -775,6 +826,10 @@ type rectangle struct {
 
 func rect(x, y, w, h int) rectangle {
 	return rectangle{x: x, y: y, w: w, h: h}
+}
+
+func (r rectangle) contains(x, y int) bool {
+	return x >= r.x && x < r.x+r.w && y >= r.y && y < r.y+r.h
 }
 
 func overlap(a, b rectangle) bool {
