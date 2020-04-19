@@ -87,20 +87,35 @@ var (
 
 	levels = []string{
 		`
+		s
+		.
+		.
+		.
+		.
+		.
+		D
+		.
+		x
+		`,
+
+		`
+	.s              .
 	.             Dx.
-	.s             x.
+	.              x.
 	.>xxxxxxxxxxxxxx.
 	`,
 
 		`
+	.s              .
 	.             Dx.
-	.s           o x.
+	.            o x.
 	.>xxxxxxxxxxxxxx.
 	`,
 
 		`
+	.s              .
 	.             D .
-	.s           o  .
+	.            o  .
 	.>xxxxxxxxxxxxxx.
 	`,
 
@@ -299,13 +314,14 @@ var (
 	levelLost  = 0 // Call isLevelLost() to see if the level was lost.
 	lostTimer  = 0
 
-	speedX    = 0
-	speedY    = 0.0
-	gravity   = 0.36
-	maxSpeedY = 15.0
-	player    = rect(0, 0, 48, 96)
-	falling   = false
-	firstTurn = true
+	speedX      = 0
+	speedY      = 0.0
+	gravity     = 0.36
+	maxSpeedY   = 15.0
+	player      = rect(0, 0, 48, 96)
+	falling     = false
+	firstTurn   = true
+	impactTimer = -1
 
 	noCue        = 0
 	cueMoveLeft  = 1
@@ -383,6 +399,7 @@ func main() {
 		falling = false
 		firstTurn = true
 		fadeIn()
+		impactTimer = -1
 	}
 
 	previousLevel := func() {
@@ -519,6 +536,9 @@ func main() {
 				player.y += dy
 				yDist -= dy
 				if playerOnGround() {
+					if speedY > 0 {
+						impactTimer = 0
+					}
 					falling = false
 					yDist = 0
 					speedY = 0
@@ -668,7 +688,31 @@ func main() {
 			dx := round(float64(dy) * float64(r.w) / float64(r.h))
 			r.x += dx / 2
 			r.w -= dx
+			r.y -= dy
 			r.h += dy
+		}
+		if speedY < 0 {
+			dy := round(-speedY)
+			dx := round(float64(dy) * float64(r.w) / float64(r.h))
+			r.x += dx / 2
+			r.w -= dx
+			r.y -= dy
+			r.h += dy
+		}
+		if impactTimer != -1 {
+			impacts := []int{6, 12, 14, 13, 11, 8, 4, -2, -3, -1, 0}
+
+			dy := impacts[impactTimer]
+			dx := round(float64(dy) * float64(r.w) / float64(r.h))
+			r.y += dy
+			r.h -= dy
+			r.x -= dx / 2
+			r.w += dx
+
+			impactTimer++
+			if impactTimer >= len(impacts) {
+				impactTimer = -1
+			}
 		}
 		window.FillRect(screenX(r.x), screenY(r.y), r.w, r.h, blue5)
 		window.FillRect(screenX(r.x)+4, screenY(r.y)+4, r.w-8, r.h-8, blue1)
