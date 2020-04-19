@@ -15,7 +15,7 @@ import (
 var (
 	windowTitle      = "LD46"
 	windowFullscreen = true
-	debugKeys        = false
+	debugKeys        = true
 
 	tileSize = 64
 
@@ -455,8 +455,7 @@ func main() {
 
 		if !fading {
 			// If we are at the door, start the next level.
-			// TODO There should be an animation going into the door and then the
-			// screen fades to black and comes back out of black in the next level.
+			// TODO There should be an animation going into the door.
 			if level != nil && speedX == 0 && speedY == 0 {
 				t := level.tileAt(toTile(player.x+player.w/2), toTile(player.y))
 				if t != nil && t.kind == tileDoor {
@@ -660,21 +659,19 @@ func main() {
 			)
 		}
 
-		// Draw player. TODO Have a real animation for the player.
-		window.FillRect(
-			screenX(player.x),
-			screenY(player.y),
-			player.w,
-			player.h,
-			blue5,
-		)
-		window.FillRect(
-			screenX(player.x)+4,
-			screenY(player.y)+4,
-			player.w-8,
-			player.h-8,
-			blue1,
-		)
+		// Draw player. The rectangle is stretched and squashed according to its
+		// movement. This is only cosmetic, the collision detection always works
+		// with the original player rectangle.
+		r := player
+		if speedY > 0 {
+			dy := round(speedY)
+			dx := round(float64(dy) * float64(r.w) / float64(r.h))
+			r.x += dx / 2
+			r.w -= dx
+			r.h += dy
+		}
+		window.FillRect(screenX(r.x), screenY(r.y), r.w, r.h, blue5)
+		window.FillRect(screenX(r.x)+4, screenY(r.y)+4, r.w-8, r.h-8, blue1)
 
 		// Draw preview of the tile in movement.
 		if movingTile != nil {
