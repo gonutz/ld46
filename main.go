@@ -47,15 +47,34 @@ var (
 		blue0, blue1, blue2, blue3, blue4, blue5, blue6, blue7, blue8,
 	}
 
-	tileSolid     = "solid_tile.png"
-	tileDrag      = "draggable_tile.png"
-	tileDoor      = "door_tile.png"
-	tileSpike     = "tile_spike.png"
-	tileHighlight = "highlighted_tile.png"
-	tilePreview   = "preview_tile.png"
+	tileSolid    tileType = 1
+	tileLeft     tileType = 2
+	tileRight    tileType = 3
+	tileJump     tileType = 4
+	tileDrag     tileType = 5
+	tileJumpDrag tileType = 6
+	tileDoor     tileType = 7
+	tileSpike    tileType = 8
 
-	tileMapping = map[rune]string{
+	tileTypeToImage = map[tileType]string{
+		tileSolid:    "tile_solid.png",
+		tileLeft:     "tile_left.png",
+		tileRight:    "tile_right.png",
+		tileJump:     "tile_jump.png",
+		tileDrag:     "tile_draggable.png",
+		tileJumpDrag: "tile_jump_draggable.png",
+		tileDoor:     "tile_door.png",
+		tileSpike:    "tile_spike.png",
+	}
+
+	tilePreview = "tile_preview.png"
+
+	tileMapping = map[rune]tileType{
 		'x': tileSolid,
+		'<': tileLeft,
+		'>': tileRight,
+		'^': tileJump,
+		'Z': tileJumpDrag,
 		'o': tileDrag,
 		'D': tileDoor,
 		'|': tileSpike,
@@ -63,22 +82,41 @@ var (
 
 	levels = []string{
 		`
-	x               x
+	xs              x
 	x               x
 	x               x
 	x              Dx
+	x               x
+	x>xxxxxxxxxxxxxxx
+	`,
+
+		`
 	xs              x
-	xxxxxxxxxxxxxxxxx
+	x               x
+	x               x
+	x              Dx
+	x       o       x
+	x>xxxxxxxxxxxxxxx
 	`,
 
 		`
 	x                     x
 	x          o          x
 	x                     x
-	xD                   Dx
+	x                    Dx
 	xs                    x
-	xxxxxxxxxxx xxxxxxxxxxx
+	x>xxxxxxxxx xxxxxxxxxxx
 	.         x|x         .
+	.         xxx         .
+	`,
+
+		`
+	x                     x
+	x          Z          x
+	x                     x
+	x                    Dx
+	xs                    x
+	x>xxxxxxxxxo<xxxxxxxxxx
 	.         xxx         .
 	`,
 
@@ -98,8 +136,13 @@ var (
 	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	D                                                  D.
+	.                                                  D.
 	s            o                                     ..
+	>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -113,16 +156,20 @@ var (
 	`,
 	}
 	levelIndex = 0
-	levelLost  = false
+	levelLost  = 0 // Call isLevelLost() to see if the level was lost.
 	lostTimer  = 0
 
-	speedX    = 4
+	speedX    = 0
 	speedY    = 0.0
 	gravity   = 0.35
 	maxSpeedY = 10.0
 	player    = rect(0, 0, 48, 96)
 	falling   = false
 )
+
+func isLevelLost() bool {
+	return levelLost > 3
+}
 
 func main() {
 	var level *level
@@ -134,9 +181,9 @@ func main() {
 		handClosing = false
 		leftMouseWasDown = false
 		movingTile = nil
-		levelLost = false
+		levelLost = 0
 		lostTimer = 0
-		speedX = 3
+		speedX = 0
 		speedY = 0.0
 		falling = false
 	}
@@ -192,10 +239,14 @@ func main() {
 		// screen fades to black and comes back out of black in the next level.
 		if level != nil && speedX == 0 && speedY == 0 {
 			t := level.tileAt(toTile(player.x+player.w/2), toTile(player.y))
-			if t != nil && t.image == tileDoor {
+			if t != nil && t.kind == tileDoor {
 				nextLevel()
 			}
-			levelLost = true
+			levelLost++
+		}
+
+		if speedX != 0 || speedY != 0 {
+			levelLost = 0
 		}
 
 		// Make sure we have a level right now.
@@ -245,6 +296,12 @@ func main() {
 				falling = true
 			}
 		}
+		handleCues := func() {
+			cue := level.cueAt(player.x+player.w/2, player.y+player.h)
+			if cue != nil {
+				speedX, speedY = cue.speedX, cue.speedY
+			}
+		}
 		func() {
 			dx := sign(speedX)
 			for i := 0; i < abs(speedX); i++ {
@@ -258,12 +315,14 @@ func main() {
 				}
 
 				move1inY()
+				handleCues()
 			}
 		}()
 		for !doneInY() {
 			move1inY()
 		}
 		fall()
+		handleCues()
 
 		if falling {
 			speedY += gravity
@@ -278,9 +337,9 @@ func main() {
 		// If the player clicks on a draggable tile, start moving it.
 		if !leftMouseWasDown && leftMouseDown {
 			for i, t := range level.tiles {
-				if t.image == tileDrag && t.contains(mx, my) {
+				if t.draggable() && t.contains(mx, my) {
 					movingTile = &level.tiles[i]
-					movingTile.image = tileHighlight
+					movingTile.highlighted = true
 					previewDx = mx - t.x*tileSize
 					previewDy = my - t.y*tileSize
 				}
@@ -289,7 +348,7 @@ func main() {
 
 		// If the player just stopped moving a tile, reset it.
 		if !leftMouseDown && movingTile != nil {
-			movingTile.image = tileDrag
+			movingTile.highlighted = false
 			movingTile = nil
 		}
 
@@ -330,12 +389,11 @@ func main() {
 
 		// Draw tiles.
 		for _, t := range level.tiles {
-			image := t.image
-			if movingTile == nil && t.image == tileDrag && t.contains(mx, my) {
-				image = tileHighlight
+			if movingTile == nil && t.draggable() && t.contains(mx, my) {
+				t.highlighted = true
 			}
 			window.DrawImageFile(
-				image,
+				t.image(),
 				screenX(t.x*tileSize),
 				screenY(t.y*tileSize),
 			)
@@ -395,7 +453,7 @@ func main() {
 		}
 
 		{
-			if levelLost {
+			if isLevelLost() {
 				lostTimer++
 			}
 			textScale := textScale + float32(30-abs(lostTimer%60-30))/15
@@ -403,11 +461,7 @@ func main() {
 			textW, textH := window.GetScaledTextSize(text, textScale)
 			textX := (windowW - textW) / 2
 			window.FillRect(textX-5, 0, textW+10, textH+10, textBackground)
-			color := blue8
-			if levelLost && (lostTimer/30)%2 == 0 {
-				//color = blue4
-			}
-			window.DrawScaledText(text, textX, 5, textScale, color)
+			window.DrawScaledText(text, textX, 5, textScale, blue8)
 		}
 
 		{
@@ -500,11 +554,32 @@ func parseLevel(s string) *level {
 		}
 		for x, r := range line {
 			x := x
-			if image, ok := tileMapping[r]; ok {
-				l.tiles = append(l.tiles, tile{x: x, y: y, image: image})
+			if kind, ok := tileMapping[r]; ok {
+				l.tiles = append(l.tiles, tile{
+					x:           x,
+					y:           y,
+					kind:        kind,
+					isSolid:     !(kind == tileSpike || kind == tileDoor),
+					isDraggable: kind == tileDrag || kind == tileJumpDrag,
+				})
 			}
-			if r == 's' {
+			switch r {
+			case 's':
 				l.playerX, l.playerY = x, y
+			case '<':
+				l.cues = append(l.cues, cue{
+					x:      x*tileSize + tileSize/2,
+					y:      y * tileSize,
+					speedX: -3,
+					speedY: 0.0,
+				})
+			case '>':
+				l.cues = append(l.cues, cue{
+					x:      x*tileSize + tileSize/2,
+					y:      y * tileSize,
+					speedX: 3,
+					speedY: 0.0,
+				})
 			}
 		}
 		y++
@@ -516,6 +591,7 @@ func parseLevel(s string) *level {
 
 type level struct {
 	tiles   []tile
+	cues    []cue
 	width   int
 	height  int
 	playerX int
@@ -531,9 +607,31 @@ func (l *level) tileAt(x, y int) *tile {
 	return nil
 }
 
+func (l *level) cueAt(x, y int) *cue {
+	for i, c := range l.cues {
+		if x == c.x && y == c.y {
+			return &l.cues[i]
+		}
+	}
+	return nil
+}
+
 type tile struct {
-	x, y  int
-	image string
+	x, y        int
+	kind        tileType
+	isSolid     bool
+	isDraggable bool
+	highlighted bool
+}
+
+type tileType int
+
+func (t *tile) image() string {
+	s := tileTypeToImage[t.kind]
+	if t.highlighted {
+		s = strings.TrimSuffix(s, ".png") + "_highlight.png"
+	}
+	return s
 }
 
 func (t *tile) contains(x, y int) bool {
@@ -546,8 +644,17 @@ func (t *tile) bounds() rectangle {
 }
 
 func (t *tile) solid() bool {
-	return t != nil &&
-		(t.image == tileSolid || t.image == tileDrag || t.image == tileHighlight)
+	return t != nil && t.isSolid
+}
+
+func (t *tile) draggable() bool {
+	return t != nil && t.isDraggable
+}
+
+type cue struct {
+	x, y   int
+	speedX int
+	speedY float64
 }
 
 func worldX(screenX int) int {
