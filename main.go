@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/gonutz/prototype/draw"
@@ -9,6 +10,7 @@ import (
 var (
 	windowTitle      = "LD46"
 	windowFullscreen = true
+	debugKeys        = true
 
 	tileSize = 64
 
@@ -55,18 +57,31 @@ var (
 		'x': tileSolid,
 		'o': tileDrag,
 		'D': tileDoor,
-		'^': tileSpike,
+		'|': tileSpike,
 	}
 
-	level1 = parseLevel(`
+	level1 = `
+	x               x
+	x               x
+	x               x
+	x              Dx
+	xs              x
+	xxxxxxxxxxxxxxxxx
+	`
+
+	level2 = `
+	x                     x
 	x          o          x
 	x                     x
 	x                    Dx
 	xs                    x
 	xxxxxxxxxxx xxxxxxxxxxx
-	.         x^x         .
+	.         x|x         .
 	.         xxx         .
-	`)
+	`
+
+	levels     = []string{level1, level2}
+	levelIndex = 0
 
 	speedX    = 3
 	speedY    = 0.0
@@ -77,19 +92,62 @@ var (
 )
 
 func main() {
-	level := level1
-	player.x = level.playerX*tileSize + (tileSize-player.w)/2
-	player.y = level.playerY*tileSize + tileSize - player.h
+	var level *level
+	startLevel := func() {
+		level = parseLevel(levels[levelIndex])
+		player.x = level.playerX*tileSize + (tileSize-player.w)/2
+		player.y = level.playerY*tileSize + tileSize - player.h
+		handClosing = false
+		leftMouseWasDown = false
+		movingTile = nil
+		speedX = 3
+		speedY = 0.0
+		falling = false
+	}
+
 	err := draw.RunWindow(windowTitle, 800, 600, func(window draw.Window) {
+		// Some keys are handled right on top before the frame gets drawn, to be
+		// most responsive.
+
+		// Close window right away when requested.
 		if window.WasKeyPressed(draw.KeyEscape) {
 			window.Close()
+			return
 		}
+
+		// Toggle fullscreen and center the camera on the player afterwards.
+		centerCamera := false
 		if window.WasKeyPressed(draw.KeyEnter) &&
 			(window.IsKeyDown(draw.KeyLeftAlt) || window.IsKeyDown(draw.KeyRightAlt)) {
 			windowFullscreen = !windowFullscreen
+			centerCamera = true
 		}
 		window.SetFullscreen(windowFullscreen)
 		windowW, windowH := window.Size()
+		if centerCamera {
+			cameraX = player.x + player.w/2 - windowW/2
+			cameraY = player.y + player.h/2 - windowH/2
+		}
+
+		if window.WasKeyPressed(draw.KeyF2) {
+			startLevel()
+		}
+
+		if debugKeys {
+			if window.WasKeyPressed(draw.KeyLeft) {
+				levelIndex = clamp(levelIndex-1, 0, len(levels)-1)
+				level = nil
+			}
+			if window.WasKeyPressed(draw.KeyRight) {
+				levelIndex = clamp(levelIndex+1, 0, len(levels)-1)
+				level = nil
+			}
+		}
+
+		// Make sure we have a level right now.
+		if level == nil {
+			startLevel()
+		}
 
 		// Clamp the camera to the level boundaries.
 		cameraX = clamp(cameraX, 0, level.width-windowW)
@@ -230,8 +288,20 @@ func main() {
 		}
 
 		// Draw player. TODO Have a real animation for the player.
-		window.FillRect(screenX(player.x), screenY(player.y), player.w, player.h, blue2)
-		window.DrawRect(screenX(player.x), screenY(player.y), player.w, player.h, blue5)
+		window.FillRect(
+			screenX(player.x),
+			screenY(player.y),
+			player.w,
+			player.h,
+			blue5,
+		)
+		window.FillRect(
+			screenX(player.x)+4,
+			screenY(player.y)+4,
+			player.w-8,
+			player.h-8,
+			blue1,
+		)
 
 		// Draw preview of the tile in movement.
 		if movingTile != nil {
@@ -256,6 +326,24 @@ func main() {
 			screenY(my)-20,
 		)
 
+		// Draw texts at the top: which level are we in, what keyboard controls
+		// are there.
+		const textScale = 1.6
+		textBackground := blue3
+		textBackground.A = 0.5
+
+		text := fmt.Sprintf("Level %d/%d", levelIndex+1, len(levels))
+		textW, textH := window.GetScaledTextSize(text, textScale)
+		window.FillRect(0, 0, textW+10, textH+10, textBackground)
+		window.DrawScaledText(text, 5, 5, textScale, blue8)
+
+		text = "       F2: restart level\nAlt+Enter: toggle fullscreen"
+		textW, textH = window.GetScaledTextSize(text, textScale)
+		window.FillRect(windowW-textW-10, 0, textW+10, textH+10, textBackground)
+		window.DrawScaledText(text, windowW-textW-5, 5, textScale, blue8)
+
+		// Update the frame information. These should always be at the end of
+		// the frame.
 		leftMouseWasDown = leftMouseDown
 		cameraX += cameraDx
 		cameraY += cameraDy
