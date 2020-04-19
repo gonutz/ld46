@@ -1,9 +1,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"strings"
 
+	"github.com/gonutz/blob"
+	"github.com/gonutz/payload"
 	"github.com/gonutz/prototype/draw"
 )
 
@@ -246,7 +250,34 @@ func isLevelLost() bool {
 	return levelLost > 3
 }
 
+type dummyCloser struct {
+	io.ReadSeeker
+}
+
+func (dummyCloser) Close() error { return nil }
+
 func main() {
+	// For the release we build all assets into the executable. This reads that
+	// data and if it finds it, directs the prototype lib to use that instead of
+	// the file system.
+	if assets, err := payload.Open(); err == nil {
+		defer assets.Close()
+		if r, err := blob.Open(assets); err == nil {
+			for i := 0; i < r.ItemCount(); i++ {
+				fmt.Println(r.GetIDAtIndex(i))
+			}
+			draw.OpenFile = func(path string) (io.ReadCloser, error) {
+				f, found := r.GetByID(strings.TrimPrefix(path, "assets/"))
+				if found {
+					return dummyCloser{f}, nil
+				} else {
+					panic(path + " not found in blob")
+					return nil, errors.New(path + " not found in blob")
+				}
+			}
+		}
+	}
+
 	var level *level
 	startLevel := func() {
 		level = parseLevel(levels[levelIndex])

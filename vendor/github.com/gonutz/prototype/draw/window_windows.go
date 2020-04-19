@@ -8,6 +8,7 @@ import (
 	"image"
 	"image/draw"
 	"image/png"
+	"io"
 	"math"
 	"os"
 	"runtime"
@@ -23,6 +24,10 @@ import (
 	"github.com/gonutz/mixer/wav"
 	"github.com/gonutz/w32"
 )
+
+var OpenFile = func(path string) (io.ReadCloser, error) {
+	return os.Open(path)
+}
 
 func init() {
 	runtime.LockOSThread()
@@ -755,7 +760,13 @@ func (w *window) PlaySoundFile(path string) error {
 	}
 	source, ok := w.sounds[path]
 	if !ok {
-		wave, err := wav.LoadFromFile(path)
+		f, err := OpenFile(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		wave, err := wav.Read(f)
 		if err != nil {
 			return err
 		}
@@ -824,7 +835,7 @@ func (w *window) loadFontTexture() error {
 }
 
 func (w *window) loadTexture(path string) error {
-	file, err := os.Open(path)
+	file, err := OpenFile(path)
 	if err != nil {
 		return err
 	}
