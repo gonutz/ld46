@@ -70,10 +70,6 @@ var (
 		tileSpike: "tile_spike",
 	}
 
-	leftCue  = cue{speedX: -5}
-	rightCue = cue{speedX: 5}
-	jumpCue  = cue{speedY: -11}
-
 	tilePreview = "tile_preview.png"
 
 	tileMapping = map[rune]tile{
@@ -302,6 +298,11 @@ var (
 	player    = rect(0, 0, 48, 96)
 	falling   = false
 
+	noCue        = 0
+	cueMoveLeft  = 1
+	cueMoveRight = 2
+	cueJump      = 3
+
 	musicNotStarted   = 0
 	introMusicPlaying = 1
 	musicRepeating    = 2
@@ -507,7 +508,15 @@ func main() {
 		}
 		handleCues := func() {
 			cue := level.cueAt(player.x+player.w/2, player.y+player.h)
-			speedX, speedY = cue.updateSpeed(speedX, speedY)
+			switch cue {
+			case cueMoveLeft:
+				speedX = -5
+			case cueMoveRight:
+				speedX = 5
+			case cueJump:
+				speedY = -11
+				window.PlaySoundFile("assets/jump.wav")
+			}
 		}
 		func() {
 			dx := sign(speedX)
@@ -821,25 +830,25 @@ func (l *level) tileAt(x, y int) *tile {
 	return nil
 }
 
-func (l *level) cueAt(x, y int) *cue {
+func (l *level) cueAt(x, y int) int {
 	// +9999 is to make sure modulo works for negative x and y values.
 	if (x+9999*tileSize)%tileSize == tileSize/2 &&
 		(y+9999*tileSize)%tileSize == 0 {
 		t := l.tileAt(toTile(x), toTile(y))
 		if t == nil {
-			return nil
+			return noCue
 		}
 		if t.kind == tileLeft {
-			return &leftCue
+			return cueMoveLeft
 		}
 		if t.kind == tileRight {
-			return &rightCue
+			return cueMoveRight
 		}
 		if t.kind == tileJump {
-			return &jumpCue
+			return cueJump
 		}
 	}
-	return nil
+	return noCue
 }
 
 type tile struct {
@@ -878,24 +887,6 @@ func (t *tile) solid() bool {
 
 func (t *tile) draggable() bool {
 	return t != nil && t.isDraggable
-}
-
-type cue struct {
-	speedX int
-	speedY float64
-}
-
-func (c *cue) updateSpeed(dx int, dy float64) (int, float64) {
-	if c == nil {
-		return dx, dy
-	}
-	if c.speedX != 0 {
-		return c.speedX, 0
-	}
-	if c.speedY != 0 {
-		return dx, c.speedY
-	}
-	return dx, dy
 }
 
 func worldX(screenX int) int {
