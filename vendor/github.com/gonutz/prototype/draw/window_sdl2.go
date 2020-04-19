@@ -119,25 +119,17 @@ func (w *window) runMainLoop() {
 				w.mouse.x = int(event.X)
 				w.mouse.y = int(event.Y)
 			case *sdl.MouseButtonEvent:
-				if event.State == sdl.PRESSED {
-					w.clicks = append(w.clicks, makeClick(event))
-					switch event.Button {
-					case sdl.BUTTON_LEFT:
-						w.mouseDown[LeftButton] = true
-					case sdl.BUTTON_RIGHT:
-						w.mouseDown[RightButton] = true
-					case sdl.BUTTON_MIDDLE:
-						w.mouseDown[MiddleButton] = true
+				if button, ok := toMouseButton(event.Button); ok {
+					if event.State == sdl.PRESSED {
+						w.clicks = append(w.clicks, MouseClick{
+							int(event.X),
+							int(event.Y),
+							MouseButton(event.Button),
+						})
+						w.mouseDown[button] = true
 					}
-				}
-				if event.State == sdl.RELEASED {
-					switch event.Button {
-					case sdl.BUTTON_LEFT:
-						w.mouseDown[LeftButton] = false
-					case sdl.BUTTON_RIGHT:
-						w.mouseDown[RightButton] = false
-					case sdl.BUTTON_MIDDLE:
-						w.mouseDown[MiddleButton] = false
+					if event.State == sdl.RELEASED {
+						w.mouseDown[button] = false
 					}
 				}
 			case *sdl.MouseWheelEvent:
@@ -178,8 +170,17 @@ func (w *window) runMainLoop() {
 	}
 }
 
-func makeClick(event *sdl.MouseButtonEvent) MouseClick {
-	return MouseClick{int(event.X), int(event.Y), MouseButton(event.Button)}
+func toMouseButton(b uint8) (MouseButton, bool) {
+	switch b {
+	case sdl.BUTTON_LEFT:
+		return LeftButton, true
+	case sdl.BUTTON_RIGHT:
+		return RightButton, true
+	case sdl.BUTTON_MIDDLE:
+		return MiddleButton, true
+	default:
+		return 0, false
+	}
 }
 
 func (w *window) setKeyDown(key sdl.Keycode, down bool) {
