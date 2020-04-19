@@ -81,6 +81,8 @@ var (
 		'>': tile{kind: tileRight, isSolid: true},
 		'^': tile{kind: tileJump, isSolid: true},
 		'Z': tile{kind: tileJump, isSolid: true, isDraggable: true},
+		'(': tile{kind: tileLeft, isSolid: true, isDraggable: true},
+		')': tile{kind: tileRight, isSolid: true, isDraggable: true},
 		'o': tile{kind: tileSolid, isSolid: true, isDraggable: true},
 		'D': tile{kind: tileDoor},
 		'|': tile{kind: tileSpike},
@@ -172,6 +174,56 @@ var (
 	.>xxxxxx      xxx .
 	.      x||||||x   .
 	.      xxxxxxxx   .
+	`,
+
+		`
+	.                   .
+	.                   .
+	.s                  .
+	.>xx                .
+	.x                  .
+	.x                  .
+	.x                  .
+	.xD (               .
+	.x                  .
+	.xxxxxxxxxxxxxxxxx  .
+	.                   .
+	.                   .
+	`,
+
+		`
+	.                   .
+	.                   .
+	.                   .
+	.                 D .
+	. s                 .
+	. )xxxxxxxxx(xxxxxx .
+	.                   .
+	.                   .
+	`,
+
+		`
+	.                     .
+	.                     .
+	.           (   )     .
+	.                     .
+	.                     .
+	. s                   .
+	. >xxxxxxxxxxx        .
+	.                     .
+	.                     .
+	.              xxxxxx .
+	.                     .
+	.                     .
+	.       xxxxxx        .
+	.                     .
+	.                     .
+	.              xxxxxx .
+	.       D             .
+	.                     .
+	.       x^^^^^        .
+	.                     .
+	.                     .
 	`,
 
 		`
