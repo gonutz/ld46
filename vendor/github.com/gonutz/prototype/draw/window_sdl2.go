@@ -124,7 +124,7 @@ func (w *window) runMainLoop() {
 						w.clicks = append(w.clicks, MouseClick{
 							int(event.X),
 							int(event.Y),
-							MouseButton(event.Button),
+							MouseButton(button),
 						})
 						w.mouseDown[button] = true
 					}
