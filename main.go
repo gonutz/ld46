@@ -17,9 +17,9 @@ var (
 	handClosing = false
 	handFrame   = newFrameTimer(3).clamp(0, len(handCursors)-1)
 	handCursors = []string{
-		"open_hand_cursor.png",
-		"closing_hand_cursor_1.png",
-		"closing_hand_cursor_2.png",
+		"assets/open_hand_cursor.png",
+		"assets/closing_hand_cursor_1.png",
+		"assets/closing_hand_cursor_2.png",
 	}
 
 	leftMouseWasDown     = false
@@ -112,6 +112,16 @@ var (
 	`,
 
 		`
+	s         oo   .
+	.              .
+	.             Dx
+	.              x
+	>xxxxxxxxx   xxx
+	.        x|||x .
+	.        xxxxx .
+	`,
+
+		`
 	s          o   .
 	.              .
 	.             Dx
@@ -122,8 +132,11 @@ var (
 	`,
 
 		`
-	s              .
-	.         Z    .
+	s              x
+	.              x
+	.              x
+	.              x
+	.         Z    x
 	.             Dx
 	.              x
 	>xxxxxxx     xxx
@@ -133,6 +146,9 @@ var (
 
 		`
 	s              x
+	.              x
+	.              x
+	.              x
 	.         Z    x
 	.             Dx
 	.              x
@@ -143,6 +159,9 @@ var (
 
 		`
 	s              .
+	.              .
+	.              .
+	.              .
 	.         Z    .
 	.             Dx
 	.              x
@@ -152,9 +171,8 @@ var (
 	`,
 
 		`
-	.                     x
-	.          Z          x
-	.                     x
+	.          Z          .
+	.                     .
 	.                    Dx
 	s                     x
 	>xxxxxxxxxxo<<<<<<<xxxx
@@ -724,7 +742,7 @@ type tile struct {
 type tileType int
 
 func (t *tile) image() string {
-	s := tileTypeToImage[t.kind]
+	s := "assets/" + tileTypeToImage[t.kind]
 	if t.isDraggable {
 		s += "_draggable"
 	}
