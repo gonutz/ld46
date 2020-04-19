@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/gonutz/blob"
 	"github.com/gonutz/payload"
@@ -300,6 +301,13 @@ var (
 	maxSpeedY = 15.0
 	player    = rect(0, 0, 48, 96)
 	falling   = false
+
+	musicNotStarted   = 0
+	introMusicPlaying = 1
+	musicRepeating    = 2
+
+	musicState     = musicNotStarted
+	musicStartTime time.Time
 )
 
 func isLevelLost() bool {
@@ -362,6 +370,25 @@ func main() {
 	}
 
 	err := draw.RunWindow(windowTitle, 1000, 600, func(window draw.Window) {
+		// Update the music.
+		switch musicState {
+		case musicNotStarted:
+			window.PlaySoundFile("assets/music_intro.wav")
+			musicState = introMusicPlaying
+			musicStartTime = time.Now()
+		case introMusicPlaying:
+			if time.Now().Sub(musicStartTime) >= 9938*time.Millisecond {
+				window.PlaySoundFile("assets/music_repeat.wav")
+				musicState = musicRepeating
+				musicStartTime = time.Now()
+			}
+		case musicRepeating:
+			if time.Now().Sub(musicStartTime) >= 15951*time.Millisecond {
+				window.PlaySoundFile("assets/music_repeat.wav")
+				musicStartTime = time.Now()
+			}
+		}
+
 		// Some keys are handled right on top before the frame gets drawn, to be
 		// most responsive.
 
