@@ -154,8 +154,22 @@ var (
 	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 	`,
+
+		`
+	s       .
+	>       .
+	.       .
+	.       .
+	.  <    .
+	.    ooo.
+	.       .
+	>   oooo.
+	.       .
+	.       .
+	.  x^x  .
+	`,
 	}
-	levelIndex = 0
+	levelIndex = 5
 	levelLost  = 0 // Call isLevelLost() to see if the level was lost.
 	lostTimer  = 0
 
@@ -268,6 +282,11 @@ func main() {
 
 		// Move the player.
 		playerOnGround := func() bool {
+			if speedY < 0 {
+				// Jumping up means we are not on the ground, even if we still
+				// have the floor under us because we are just starting to jump.
+				return false
+			}
 			// NOTE Here we assume that the player is not wider than a tile.
 			// If the player gets wider than a tile we have to compare more
 			// tiles in x.
@@ -276,14 +295,29 @@ func main() {
 			ty := toTile(player.y + player.h)
 			return level.tileAt(tx1, ty).solid() || level.tileAt(tx2, ty).solid()
 		}
+		playerHitCeiling := func() bool {
+			// NOTE Here we assume that the player is not wider than a tile.
+			// If the player gets wider than a tile we have to compare more
+			// tiles in x.
+			tx1 := toTile(player.x)
+			tx2 := toTile(player.x + player.w - 1)
+			ty := toTile(player.y - 1)
+			return level.tileAt(tx1, ty).solid() || level.tileAt(tx2, ty).solid()
+		}
 		yDist := round(speedY)
 		doneInY := func() bool { return yDist == 0 }
 		move1inY := func() {
-			// TODO Handle upward movement and collisions.
-			player.y += sign(yDist)
-			yDist -= sign(yDist)
+			dy := sign(yDist)
+			player.y += dy
+			yDist -= dy
 			if playerOnGround() {
 				falling = false
+				yDist = 0
+				speedY = 0
+			}
+			if playerHitCeiling() {
+				falling = true
+				player.y++
 				yDist = 0
 				speedY = 0
 			}
@@ -298,13 +332,14 @@ func main() {
 		}
 		handleCues := func() {
 			cue := level.cueAt(player.x+player.w/2, player.y+player.h)
-			if cue != nil {
-				speedX, speedY = cue.speedX, cue.speedY
-			}
+			speedX, speedY = cue.updateSpeed(speedX, speedY)
 		}
 		func() {
 			dx := sign(speedX)
 			for i := 0; i < abs(speedX); i++ {
+				move1inY()
+				handleCues()
+
 				player.x += dx
 				for _, t := range level.tiles {
 					if t.solid() && overlap(player, t.bounds()) {
@@ -313,9 +348,6 @@ func main() {
 						return
 					}
 				}
-
-				move1inY()
-				handleCues()
 			}
 		}()
 		for !doneInY() {
@@ -580,6 +612,13 @@ func parseLevel(s string) *level {
 					speedX: 3,
 					speedY: 0.0,
 				})
+			case '^':
+				l.cues = append(l.cues, cue{
+					x:      x*tileSize + tileSize/2,
+					y:      y * tileSize,
+					speedX: 0,
+					speedY: -14.0,
+				})
 			}
 		}
 		y++
@@ -655,6 +694,19 @@ type cue struct {
 	x, y   int
 	speedX int
 	speedY float64
+}
+
+func (c *cue) updateSpeed(dx int, dy float64) (int, float64) {
+	if c == nil {
+		return dx, dy
+	}
+	if c.speedX != 0 {
+		return c.speedX, 0
+	}
+	if c.speedY != 0 {
+		return dx, c.speedY
+	}
+	return dx, dy
 }
 
 func worldX(screenX int) int {
