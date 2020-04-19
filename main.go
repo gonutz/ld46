@@ -314,14 +314,15 @@ var (
 	levelLost  = 0 // Call isLevelLost() to see if the level was lost.
 	lostTimer  = 0
 
-	speedX      = 0
-	speedY      = 0.0
-	gravity     = 0.36
-	maxSpeedY   = 15.0
-	player      = rect(0, 0, 48, 96)
-	falling     = false
-	firstTurn   = true
-	impactTimer = -1
+	speedX           = 0
+	speedY           = 0.0
+	gravity          = 0.36
+	maxSpeedY        = 15.0
+	player           = rect(0, 0, 48, 96)
+	falling          = false
+	firstTurn        = true
+	impactTimer      = -1
+	throughDoorTimer = -1
 
 	noCue        = 0
 	cueMoveLeft  = 1
@@ -400,6 +401,7 @@ func main() {
 		firstTurn = true
 		fadeIn()
 		impactTimer = -1
+		throughDoorTimer = -1
 	}
 
 	previousLevel := func() {
@@ -477,9 +479,7 @@ func main() {
 				if t != nil && t.kind == tileDoor {
 					nextLevel()
 					window.PlaySoundFile("assets/walk_through_door.wav")
-					// TODO There should be an animation going into the door.
-					// throughDoorTimer = 2 and double it every frame, then make
-					// the player smaller by that amount in y
+					throughDoorTimer = 2
 				}
 				levelLost++
 			}
@@ -717,6 +717,14 @@ func main() {
 			if impactTimer >= len(impacts) {
 				impactTimer = -1
 			}
+		}
+		if throughDoorTimer != -1 {
+			dy := throughDoorTimer
+			r.y -= dy / 12
+			r.h -= dy / 6
+			r.x += dy / 4
+			r.w -= dy / 2
+			throughDoorTimer++
 		}
 		window.FillRect(screenX(r.x), screenY(r.y), r.w, r.h, blue5)
 		window.FillRect(screenX(r.x)+4, screenY(r.y)+4, r.w-8, r.h-8, blue1)
