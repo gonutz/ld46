@@ -100,6 +100,15 @@ var (
 	`,
 
 		`
+	xs              x
+	x               x
+	x               x
+	x            D  x
+	x       o       x
+	x>xxxxxxxxxxxxxxx
+	`,
+
+		`
 	x                     x
 	x          o          x
 	x                     x

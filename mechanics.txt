@@ -1,7 +1,9 @@
 The first levels must introduce the following mechanics:
 - the player acts without your intervention
 - the player must reach the/a door to get to the next level
+- the player must STOP at the door to go through it
 - tiles with a handle can be dragged
 - spikes kill the player
 - tiles with up arrows make the player jump
 - tiles with left/right arrows make the player run in that direction
+- the player must not stop in horizontal direction
