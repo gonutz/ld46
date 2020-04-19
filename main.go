@@ -472,12 +472,14 @@ func main() {
 
 		if !fading {
 			// If we are at the door, start the next level.
-			// TODO There should be an animation going into the door.
 			if level != nil && speedX == 0 && speedY == 0 {
 				t := level.tileAt(toTile(player.x+player.w/2), toTile(player.y))
 				if t != nil && t.kind == tileDoor {
 					nextLevel()
 					window.PlaySoundFile("assets/walk_through_door.wav")
+					// TODO There should be an animation going into the door.
+					// throughDoorTimer = 2 and double it every frame, then make
+					// the player smaller by that amount in y
 				}
 				levelLost++
 			}
@@ -538,6 +540,7 @@ func main() {
 				if playerOnGround() {
 					if speedY > 0 {
 						impactTimer = 0
+						window.PlaySoundFile("assets/hit_floor.wav")
 					}
 					falling = false
 					yDist = 0
@@ -592,6 +595,7 @@ func main() {
 						if t.solid() && overlap(player, t.bounds()) {
 							player.x -= dx
 							speedX = 0
+							window.PlaySoundFile("assets/hit_wall.wav")
 							return
 						}
 					}
