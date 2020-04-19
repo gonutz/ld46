@@ -31,6 +31,7 @@ var (
 	// cameraMoveMargin is how close you have to be to the edge of the screen to
 	// move the camera.
 	cameraMoveMargin = 35
+	centerCamera     = false
 
 	// I want to try out a blue color palette for this game.
 	blue0 = rgb(255, 255, 255)
@@ -60,16 +61,17 @@ var (
 		'|': tileSpike,
 	}
 
-	level1 = `
+	levels = []string{
+		`
 	x               x
 	x               x
 	x               x
 	x              Dx
 	xs              x
 	xxxxxxxxxxxxxxxxx
-	`
+	`,
 
-	level2 = `
+		`
 	x                     x
 	x          o          x
 	x                     x
@@ -78,12 +80,43 @@ var (
 	xxxxxxxxxxx xxxxxxxxxxx
 	.         x|x         .
 	.         xxx         .
-	`
+	`,
 
-	levels     = []string{level1, level2}
+		`
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	D                                                  D.
+	s            o                                     ..
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	`,
+	}
 	levelIndex = 0
+	levelLost  = false
+	lostTimer  = 0
 
-	speedX    = 3
+	speedX    = 4
 	speedY    = 0.0
 	gravity   = 0.35
 	maxSpeedY = 10.0
@@ -95,11 +128,14 @@ func main() {
 	var level *level
 	startLevel := func() {
 		level = parseLevel(levels[levelIndex])
+		centerCamera = true
 		player.x = level.playerX*tileSize + (tileSize-player.w)/2
 		player.y = level.playerY*tileSize + tileSize - player.h
 		handClosing = false
 		leftMouseWasDown = false
 		movingTile = nil
+		levelLost = false
+		lostTimer = 0
 		speedX = 3
 		speedY = 0.0
 		falling = false
@@ -114,7 +150,7 @@ func main() {
 		level = nil
 	}
 
-	err := draw.RunWindow(windowTitle, 800, 600, func(window draw.Window) {
+	err := draw.RunWindow(windowTitle, 1000, 600, func(window draw.Window) {
 		// Some keys are handled right on top before the frame gets drawn, to be
 		// most responsive.
 
@@ -125,7 +161,6 @@ func main() {
 		}
 
 		// Toggle fullscreen and center the camera on the player afterwards.
-		centerCamera := false
 		if window.WasKeyPressed(draw.KeyEnter) &&
 			(window.IsKeyDown(draw.KeyLeftAlt) || window.IsKeyDown(draw.KeyRightAlt)) {
 			windowFullscreen = !windowFullscreen
@@ -136,6 +171,7 @@ func main() {
 		if centerCamera {
 			cameraX = player.x + player.w/2 - windowW/2
 			cameraY = player.y + player.h/2 - windowH/2
+			centerCamera = false
 		}
 
 		if window.WasKeyPressed(draw.KeyF2) {
@@ -154,11 +190,12 @@ func main() {
 		// If we are at the door, start the next level.
 		// TODO There should be an animation going into the door and then the
 		// screen fades to black and comes back out of black in the next level.
-		if level != nil && speedX == 0 {
+		if level != nil && speedX == 0 && speedY == 0 {
 			t := level.tileAt(toTile(player.x+player.w/2), toTile(player.y))
 			if t != nil && t.image == tileDoor {
 				nextLevel()
 			}
+			levelLost = true
 		}
 
 		// Make sure we have a level right now.
@@ -349,15 +386,37 @@ func main() {
 		textBackground := blue3
 		textBackground.A = 0.5
 
-		text := fmt.Sprintf("Level %d/%d", levelIndex+1, len(levels))
-		textW, textH := window.GetScaledTextSize(text, textScale)
-		window.FillRect(0, 0, textW+10, textH+10, textBackground)
-		window.DrawScaledText(text, 5, 5, textScale, blue8)
+		{
+			text := fmt.Sprintf("Level %d/%d", levelIndex+1, len(levels))
+			textW, textH := window.GetScaledTextSize(text, textScale)
+			textX := 5
+			window.FillRect(textX-5, 0, textW+10, textH+10, textBackground)
+			window.DrawScaledText(text, textX, 5, textScale, blue8)
+		}
 
-		text = "       F2: restart level\nAlt+Enter: toggle fullscreen"
-		textW, textH = window.GetScaledTextSize(text, textScale)
-		window.FillRect(windowW-textW-10, 0, textW+10, textH+10, textBackground)
-		window.DrawScaledText(text, windowW-textW-5, 5, textScale, blue8)
+		{
+			if levelLost {
+				lostTimer++
+			}
+			textScale := textScale + float32(30-abs(lostTimer%60-30))/15
+			text := "F2: restart level"
+			textW, textH := window.GetScaledTextSize(text, textScale)
+			textX := (windowW - textW) / 2
+			window.FillRect(textX-5, 0, textW+10, textH+10, textBackground)
+			color := blue8
+			if levelLost && (lostTimer/30)%2 == 0 {
+				//color = blue4
+			}
+			window.DrawScaledText(text, textX, 5, textScale, color)
+		}
+
+		{
+			text := "Alt+Enter: toggle fullscreen"
+			textW, textH := window.GetScaledTextSize(text, textScale)
+			textX := windowW - textW - 5
+			window.FillRect(textX-5, 0, textW+10, textH+10, textBackground)
+			window.DrawScaledText(text, textX, 5, textScale, blue8)
+		}
 
 		// Update the frame information. These should always be at the end of
 		// the frame.
