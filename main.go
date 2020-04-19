@@ -318,6 +318,12 @@ var (
 
 	musicState     = musicNotStarted
 	musicStartTime time.Time
+
+	fadingIn       = true
+	fadingOut      = false
+	fadeAlpha      float32
+	fadingSpeed    float32 = 0.025
+	nextLevelIndex int
 )
 
 func isLevelLost() bool {
@@ -349,6 +355,18 @@ func main() {
 		}
 	}
 
+	fadeIn := func() {
+		fadingIn = true
+		fadingOut = false
+		fadeAlpha = 1.0
+	}
+	fadeOut := func(dLevel int) {
+		fadingIn = false
+		fadingOut = true
+		fadeAlpha = 0.0
+		nextLevelIndex = clamp(levelIndex+dLevel, 0, len(levels)-1)
+	}
+
 	var level *level
 	startLevel := func() {
 		level = parseLevel(levels[levelIndex])
@@ -364,15 +382,14 @@ func main() {
 		speedY = 0.0
 		falling = false
 		firstTurn = true
+		fadeIn()
 	}
 
 	previousLevel := func() {
-		levelIndex = clamp(levelIndex-1, 0, len(levels)-1)
-		level = nil
+		fadeOut(-1)
 	}
 	nextLevel := func() {
-		levelIndex = clamp(levelIndex+1, 0, len(levels)-1)
-		level = nil
+		fadeOut(+1)
 	}
 
 	toggleFullscreen := func() {
@@ -421,11 +438,13 @@ func main() {
 			centerCamera = false
 		}
 
-		if window.WasKeyPressed(draw.KeyF2) {
-			startLevel()
+		fading := fadingIn || fadingOut
+
+		if window.WasKeyPressed(draw.KeyF2) && !fading {
+			fadeOut(0)
 		}
 
-		if debugKeys {
+		if debugKeys && !fading {
 			if window.WasKeyPressed(draw.KeyLeft) {
 				previousLevel()
 			}
@@ -434,20 +453,22 @@ func main() {
 			}
 		}
 
-		// If we are at the door, start the next level.
-		// TODO There should be an animation going into the door and then the
-		// screen fades to black and comes back out of black in the next level.
-		if level != nil && speedX == 0 && speedY == 0 {
-			t := level.tileAt(toTile(player.x+player.w/2), toTile(player.y))
-			if t != nil && t.kind == tileDoor {
-				nextLevel()
-				window.PlaySoundFile("assets/walk_through_door.wav")
+		if !fading {
+			// If we are at the door, start the next level.
+			// TODO There should be an animation going into the door and then the
+			// screen fades to black and comes back out of black in the next level.
+			if level != nil && speedX == 0 && speedY == 0 {
+				t := level.tileAt(toTile(player.x+player.w/2), toTile(player.y))
+				if t != nil && t.kind == tileDoor {
+					nextLevel()
+					window.PlaySoundFile("assets/walk_through_door.wav")
+				}
+				levelLost++
 			}
-			levelLost++
-		}
 
-		if speedX != 0 || speedY != 0 {
-			levelLost = 0
+			if speedX != 0 || speedY != 0 {
+				levelLost = 0
+			}
 		}
 
 		// Make sure we have a level right now.
@@ -467,105 +488,107 @@ func main() {
 			cameraY = (level.height - windowH) / 2
 		}
 
-		// Move the player.
-		playerOnGround := func() bool {
-			if speedY < 0 {
-				// Jumping up means we are not on the ground, even if we still
-				// have the floor under us because we are just starting to jump.
-				return false
-			}
-			// NOTE Here we assume that the player is not wider than a tile.
-			// If the player gets wider than a tile we have to compare more
-			// tiles in x.
-			tx1 := toTile(player.x)
-			tx2 := toTile(player.x + player.w - 1)
-			ty := toTile(player.y + player.h)
-			return level.tileAt(tx1, ty).solid() || level.tileAt(tx2, ty).solid()
-		}
-		playerHitCeiling := func() bool {
-			// NOTE Here we assume that the player is not wider than a tile.
-			// If the player gets wider than a tile we have to compare more
-			// tiles in x.
-			tx1 := toTile(player.x)
-			tx2 := toTile(player.x + player.w - 1)
-			ty := toTile(player.y - 1)
-			return level.tileAt(tx1, ty).solid() || level.tileAt(tx2, ty).solid()
-		}
-		yDist := round(speedY)
-		doneInY := func() bool { return yDist == 0 }
-		move1inY := func() {
-			dy := sign(yDist)
-			player.y += dy
-			yDist -= dy
-			if playerOnGround() {
-				falling = false
-				yDist = 0
-				speedY = 0
-			}
-			if playerHitCeiling() {
-				falling = true
-				player.y++
-				yDist = 0
-				speedY = 0
-				window.PlaySoundFile("assets/hit_ceiling.wav")
-			}
-		}
-		fall := func() {
-			if !falling && !playerOnGround() {
-				// Increment y so we hit a tile if we move in x direction
-				// very fast.
-				player.y++
-				falling = true
-			}
-		}
-		handleCues := func() {
-			cue := level.cueAt(player.x+player.w/2, player.y+player.h)
-			switch cue {
-			case cueMoveLeft:
-				speedX = -5
-				player.x--
-				if !firstTurn {
-					window.PlaySoundFile("assets/turn_around.wav")
+		if !fading {
+			// Move the player.
+			playerOnGround := func() bool {
+				if speedY < 0 {
+					// Jumping up means we are not on the ground, even if we still
+					// have the floor under us because we are just starting to jump.
+					return false
 				}
-				firstTurn = false
-			case cueMoveRight:
-				speedX = 5
-				player.x++
-				if !firstTurn {
-					window.PlaySoundFile("assets/turn_around.wav")
-				}
-				firstTurn = false
-			case cueJump:
-				speedY = -11
-				window.PlaySoundFile("assets/jump.wav")
+				// NOTE Here we assume that the player is not wider than a tile.
+				// If the player gets wider than a tile we have to compare more
+				// tiles in x.
+				tx1 := toTile(player.x)
+				tx2 := toTile(player.x + player.w - 1)
+				ty := toTile(player.y + player.h)
+				return level.tileAt(tx1, ty).solid() || level.tileAt(tx2, ty).solid()
 			}
-		}
-		func() {
-			dx := sign(speedX)
-			for i := 0; i < abs(speedX); i++ {
-				move1inY()
-				handleCues()
+			playerHitCeiling := func() bool {
+				// NOTE Here we assume that the player is not wider than a tile.
+				// If the player gets wider than a tile we have to compare more
+				// tiles in x.
+				tx1 := toTile(player.x)
+				tx2 := toTile(player.x + player.w - 1)
+				ty := toTile(player.y - 1)
+				return level.tileAt(tx1, ty).solid() || level.tileAt(tx2, ty).solid()
+			}
+			yDist := round(speedY)
+			doneInY := func() bool { return yDist == 0 }
+			move1inY := func() {
+				dy := sign(yDist)
+				player.y += dy
+				yDist -= dy
+				if playerOnGround() {
+					falling = false
+					yDist = 0
+					speedY = 0
+				}
+				if playerHitCeiling() {
+					falling = true
+					player.y++
+					yDist = 0
+					speedY = 0
+					window.PlaySoundFile("assets/hit_ceiling.wav")
+				}
+			}
+			fall := func() {
+				if !falling && !playerOnGround() {
+					// Increment y so we hit a tile if we move in x direction
+					// very fast.
+					player.y++
+					falling = true
+				}
+			}
+			handleCues := func() {
+				cue := level.cueAt(player.x+player.w/2, player.y+player.h)
+				switch cue {
+				case cueMoveLeft:
+					speedX = -5
+					player.x--
+					if !firstTurn {
+						window.PlaySoundFile("assets/turn_around.wav")
+					}
+					firstTurn = false
+				case cueMoveRight:
+					speedX = 5
+					player.x++
+					if !firstTurn {
+						window.PlaySoundFile("assets/turn_around.wav")
+					}
+					firstTurn = false
+				case cueJump:
+					speedY = -11
+					window.PlaySoundFile("assets/jump.wav")
+				}
+			}
+			func() {
+				dx := sign(speedX)
+				for i := 0; i < abs(speedX); i++ {
+					move1inY()
+					handleCues()
 
-				player.x += dx
-				for _, t := range level.tiles {
-					if t.solid() && overlap(player, t.bounds()) {
-						player.x -= dx
-						speedX = 0
-						return
+					player.x += dx
+					for _, t := range level.tiles {
+						if t.solid() && overlap(player, t.bounds()) {
+							player.x -= dx
+							speedX = 0
+							return
+						}
 					}
 				}
+			}()
+			for !doneInY() {
+				move1inY()
 			}
-		}()
-		for !doneInY() {
-			move1inY()
-		}
-		fall()
-		handleCues()
+			fall()
+			handleCues()
 
-		if falling {
-			speedY += gravity
-			if speedY > maxSpeedY {
-				speedY = maxSpeedY
+			if falling {
+				speedY += gravity
+				if speedY > maxSpeedY {
+					speedY = maxSpeedY
+				}
 			}
 		}
 
@@ -699,7 +722,7 @@ func main() {
 				window.FillRect(textX-5, textY-5, textW+10, textH+10, blue2)
 				window.DrawRect(textX-5, textY-5, textW+10, textH+10, blue1)
 				if wasLeftClicked {
-					startLevel()
+					fadeOut(0)
 				}
 			}
 			window.DrawScaledText(text, textX, textY, textScale, blue8)
@@ -735,6 +758,26 @@ func main() {
 			screenX(mx)-20,
 			screenY(my)-20,
 		)
+
+		if fadingIn {
+			fadeAlpha -= fadingSpeed
+			if fadeAlpha <= 0 {
+				fadeAlpha = 0
+				fadingIn = false
+			}
+		}
+
+		if fadingOut {
+			fadeAlpha += fadingSpeed
+			if fadeAlpha >= 1 {
+				levelIndex = nextLevelIndex
+				startLevel()
+			}
+		}
+
+		if fadingIn || fadingOut {
+			window.FillRect(0, 0, windowW, windowH, draw.RGBA(0, 0, 0, fadeAlpha))
+		}
 
 		// Update the frame information. These should always be at the end of
 		// the frame.
