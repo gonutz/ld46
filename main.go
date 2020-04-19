@@ -88,150 +88,154 @@ var (
 
 	levels = []string{
 		`
-	.            Dx
-	s             x
-	>xxxxxxxxxxxxxx
+	.             Dx.
+	.s             x.
+	.>xxxxxxxxxxxxxx.
 	`,
 
 		`
-	.            Dx
-	s           o x
-	>xxxxxxxxxxxxxx
+	.             Dx.
+	.s           o x.
+	.>xxxxxxxxxxxxxx.
 	`,
 
 		`
-	.            D.
-	s           o .
-	>xxxxxxxxxxxxxx
+	.             D .
+	.s           o  .
+	.>xxxxxxxxxxxxxx.
 	`,
 
 		`
-	s         ooo  .
-	.              .
-	.             Dx
-	.              x
-	>xxxxxxxxx   xxx
-	.        x|||x .
-	.        xxxxx .
+	.s         ooo   .
+	.                .
+	.              Dx.
+	.               x.
+	.>xxxxxxxxx   xxx.
+	.         x|||x  .
+	.         xxxxx  .
 	`,
 
 		`
-	s         oo   .
-	.              .
-	.             Dx
-	.              x
-	>xxxxxxxxx   xxx
-	.        x|||x .
-	.        xxxxx .
+	.s         oo    .
+	.                .
+	.              Dx.
+	.               x.
+	.>xxxxxxxxx   xxx.
+	.         x|||x  .
+	.         xxxxx  .
 	`,
 
 		`
-	s          o   .
-	.              .
-	.             Dx
-	.              x
-	>xxxxxxxxx   xxx
-	.        x|||x .
-	.        xxxxx .
+	.s          o    .
+	.                .
+	.              Dx.
+	.               x.
+	.>xxxxxxxxx   xxx.
+	.         x|||x  .
+	.         xxxxx  .
 	`,
 
 		`
-	s              x
-	.              x
-	.              x
-	.              x
-	.         Z    x
-	.             Dx
-	.              x
-	>xxxxxxx     xxx
-	.      x|||||x .
-	.      xxxxxxx .
+	.s              x.
+	.               x.
+	.               x.
+	.               x.
+	.          Z    x.
+	.              Dx.
+	.               x.
+	.>xxxxxxx     xxx.
+	.       x|||||x  .
+	.       xxxxxxx  .
 	`,
 
 		`
-	s              x
-	.              x
-	.              x
-	.              x
-	.         Z    x
-	.             Dx
-	.              x
-	>xxxxxx      xxx
-	.     x||||||x .
-	.     xxxxxxxx .
+	.s              x.
+	.               x.
+	.               x.
+	.               x.
+	.          Z    x.
+	.              Dx.
+	.               x.
+	.>xxxxxx      xxx.
+	.      x||||||x  .
+	.      xxxxxxxx  .
 	`,
 
 		`
-	s              .
-	.              .
-	.              .
-	.              .
-	.         Z    .
-	.             Dx
-	.              x
-	>xxxxxx      xxx
-	.     x||||||x .
-	.     xxxxxxxx .
+	.s                .
+	.                 .
+	.                 .
+	.                 .
+	.          Z      .
+	.              Dx .
+	.               x .
+	.>xxxxxx      xxx .
+	.      x||||||x   .
+	.      xxxxxxxx   .
 	`,
 
 		`
-	.          Z          .
-	.                     .
-	.                    Dx
-	s                     x
-	>xxxxxxxxxxo<<<<<<<xxxx
-	.         xxx         .
+	.           Z            .
+	.                        .
+	.                     Dx .
+	.s                     x .
+	.>xxxxxxxxxxo<<<<<<<xxxx .
+	.          xxx           .
 	`,
 
 		`
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	.                                                  D.
-	s            o                                     ..
-	>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	.                                                  D .
+	s            o                                       .
+	>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
 	`,
 
 		`
-	.s           .
-	.>           .
-	..           .
-	..           .
-	..   ^x^xx<  .
-	..           .
-	..           .
-	.>    oo     D
-	..           .
-	..           x
-	..   x^x     x
-	.x|||||||||||x
-	.xxxxxxxxxxxxx
+	.               .
+	.               .
+	. s             .
+	. >             .
+	. .             .
+	. .             .
+	. .   ^x^xx<    .
+	. .             .
+	. .             .
+	. >    oo     D .
+	. .             .
+	. .           x .
+	. .   x^x     x .
+	. x|||||||||||x .
+	. xxxxxxxxxxxxx .
+	.               .
+	.               .
 	`,
 	}
 	levelIndex = 0
