@@ -15,7 +15,7 @@ import (
 var (
 	windowTitle      = "LD46"
 	windowFullscreen = true
-	debugKeys        = true
+	debugKeys        = false
 
 	tileSize = 64
 
@@ -285,6 +285,14 @@ var (
 	. xxxxxxxxxxxxx .
 	.               .
 	.               .
+	`,
+
+		`
+	.x   x  xx  x  x     x     x x x   x x.
+	. x x  x  x x  x     x     x x xx  x x.
+	.  x   x  x x  x      x   x  x x x x x.
+	.  x   x  x x  x  s   x x x  x x  xx  .
+	.  x    xx   xx   ^    x x   x x   x x.
 	`,
 	}
 	levelIndex = 0
