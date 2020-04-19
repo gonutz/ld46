@@ -408,7 +408,7 @@ func (w *window) loadImageIfNecessary(path string) {
 		defer f.Close()
 		if data, err := ioutil.ReadAll(f); err == nil {
 			if rw, err := sdl.RWFromMem(data); err == nil {
-				img, err := img.LoadRW(path, false)
+				img, err := img.LoadRW(rw, false)
 
 				if err != nil {
 					w.textures[path] = nil

@@ -263,9 +263,6 @@ func main() {
 	if assets, err := payload.Open(); err == nil {
 		defer assets.Close()
 		if r, err := blob.Open(assets); err == nil {
-			for i := 0; i < r.ItemCount(); i++ {
-				fmt.Println(r.GetIDAtIndex(i))
-			}
 			draw.OpenFile = func(path string) (io.ReadCloser, error) {
 				f, found := r.GetByID(strings.TrimPrefix(path, "assets/"))
 				if found {
