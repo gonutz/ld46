@@ -8,9 +8,7 @@ import (
 	"image"
 	"image/draw"
 	"image/png"
-	"io"
 	"math"
-	"os"
 	"runtime"
 	"strings"
 	"sync"
@@ -24,10 +22,6 @@ import (
 	"github.com/gonutz/mixer/wav"
 	"github.com/gonutz/w32"
 )
-
-var OpenFile = func(path string) (io.ReadCloser, error) {
-	return os.Open(path)
-}
 
 func init() {
 	runtime.LockOSThread()
