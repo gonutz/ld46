@@ -356,7 +356,6 @@ func main() {
 		speedY = 0.0
 		falling = false
 		firstTurn = true
-		fmt.Println(firstTurn)
 	}
 
 	previousLevel := func() {
