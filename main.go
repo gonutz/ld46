@@ -73,7 +73,7 @@ var (
 	x                     x
 	x          o          x
 	x                     x
-	x                    Dx
+	xD                   Dx
 	xs                    x
 	xxxxxxxxxxx xxxxxxxxxxx
 	.         x|x         .
@@ -103,6 +103,15 @@ func main() {
 		speedX = 3
 		speedY = 0.0
 		falling = false
+	}
+
+	previousLevel := func() {
+		levelIndex = clamp(levelIndex-1, 0, len(levels)-1)
+		level = nil
+	}
+	nextLevel := func() {
+		levelIndex = clamp(levelIndex+1, 0, len(levels)-1)
+		level = nil
 	}
 
 	err := draw.RunWindow(windowTitle, 800, 600, func(window draw.Window) {
@@ -135,12 +144,20 @@ func main() {
 
 		if debugKeys {
 			if window.WasKeyPressed(draw.KeyLeft) {
-				levelIndex = clamp(levelIndex-1, 0, len(levels)-1)
-				level = nil
+				previousLevel()
 			}
 			if window.WasKeyPressed(draw.KeyRight) {
-				levelIndex = clamp(levelIndex+1, 0, len(levels)-1)
-				level = nil
+				nextLevel()
+			}
+		}
+
+		// If we are at the door, start the next level.
+		// TODO There should be an animation going into the door and then the
+		// screen fades to black and comes back out of black in the next level.
+		if level != nil && speedX == 0 {
+			t := level.tileAt(toTile(player.x+player.w/2), toTile(player.y))
+			if t != nil && t.image == tileDoor {
+				nextLevel()
 			}
 		}
 
