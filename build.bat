@@ -1,7 +1,7 @@
 set GOOS=windows
 set GOARCH=386
 
-go get github.com/gonutz/ico
+go get github.com/gonutz/ico/cmd/ico
 if errorlevel 1 (pause & exit)
 ico assets/open_hand_cursor.png icon.ico
 if errorlevel 1 (pause & exit)
