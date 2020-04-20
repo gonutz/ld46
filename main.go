@@ -13,9 +13,9 @@ import (
 )
 
 var (
-	windowTitle      = "LD46"
+	windowTitle      = "Keep it Alive - the Rectangle that is"
 	windowFullscreen = true
-	debugKeys        = true
+	debugKeys        = false
 
 	tileSize = 64
 
