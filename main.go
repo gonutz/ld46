@@ -5,14 +5,19 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"syscall"
 	"time"
+	"unsafe"
 
 	"github.com/gonutz/blob"
 	"github.com/gonutz/payload"
 	"github.com/gonutz/prototype/draw"
+	"github.com/gonutz/w32"
 )
 
 var (
+	isSlow = false
+
 	windowTitle      = "Keep it Alive - the Rectangle that is"
 	windowFullscreen = true
 	debugKeys        = false
@@ -353,7 +358,38 @@ type dummyCloser struct {
 
 func (dummyCloser) Close() error { return nil }
 
+var theLog string
+
+func log(a ...interface{}) {
+	theLog += fmt.Sprintln(a...)
+}
+
+func copyTextToClipboard(text string) {
+	if w32.OpenClipboard(0) {
+		w32.EmptyClipboard()
+		data := syscall.StringToUTF16(text)
+		clipBuffer := w32.GlobalAlloc(w32.GMEM_DDESHARE, uint32(len(data)*2))
+		w32.MoveMemory(
+			w32.GlobalLock(clipBuffer),
+			unsafe.Pointer(&data[0]),
+			uint32(len(data)*2),
+		)
+		w32.GlobalUnlock(clipBuffer)
+		w32.SetClipboardData(
+			w32.CF_UNICODETEXT,
+			w32.HANDLE(unsafe.Pointer(clipBuffer)),
+		)
+		w32.CloseClipboard()
+	}
+}
+
 func main() {
+	defer func() {
+		copyTextToClipboard(theLog)
+		w32.MessageBox(0, "The debug log was copied to your clipboard, please paste it with Ctrl+V into an issue at\r\n\r\nhttps://github.com/gonutz/ld46/", "Debug Log", w32.MB_OK)
+	}()
+	draw.Log = log
+
 	// For the release we build all assets into the executable. This reads that
 	// data and if it finds it, directs the prototype lib to use that instead of
 	// the file system.
@@ -830,6 +866,24 @@ func main() {
 
 		if fadingIn || fadingOut {
 			window.FillRect(0, 0, windowW, windowH, draw.RGBA(0, 0, 0, fadeAlpha))
+		}
+
+		if !isSlow {
+			window.DrawScaledText(
+				"Press SPACE when you notice a low framerate",
+				10, 50, 2,
+				draw.DarkRed,
+			)
+			if window.WasKeyPressed(draw.KeySpace) {
+				isSlow = true
+				log("SLOOOOOOOW")
+			}
+		} else {
+			window.DrawScaledText(
+				"Alert - we have low framerate!",
+				10, 50, 2,
+				draw.DarkRed,
+			)
 		}
 
 		// Update the frame information. These should always be at the end of

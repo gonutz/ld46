@@ -18,6 +18,16 @@ var OpenFile = func(path string) (io.ReadCloser, error) {
 	return os.Open(path)
 }
 
+// Log can be set to make this library output logging information. By default it
+// is set to nil and thus does nothing.
+var Log func(a ...interface{})
+
+func log(a ...interface{}) {
+	if Log != nil {
+		Log(a...)
+	}
+}
+
 // UpdateFunction is used as a callback when creating a window. It is called
 // at 60Hz and you do all your event handling and drawing in it.
 type UpdateFunction func(window Window)

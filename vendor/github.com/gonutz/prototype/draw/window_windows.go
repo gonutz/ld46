@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 	"unicode/utf16"
 	"unicode/utf8"
 	"unsafe"
@@ -44,6 +45,8 @@ var (
 )
 
 func RunWindow(title string, width, height int, update UpdateFunction) error {
+	log("RunWindow")
+
 	defer func() {
 		windowOpenMutex.Lock()
 		windowIsOpen = false
@@ -66,6 +69,7 @@ func RunWindow(title string, width, height int, update UpdateFunction) error {
 		soundOn = true
 		defer mixer.Close()
 	}
+	log("sound", soundOn)
 
 	d3d, err := d3d9.Create(d3d9.SDK_VERSION)
 	if err != nil {
@@ -147,6 +151,7 @@ func RunWindow(title string, width, height int, update UpdateFunction) error {
 			}
 		}
 	}
+	log("refresh rate", refreshRate)
 
 	window := w32.CreateWindowEx(
 		0,
@@ -235,6 +240,7 @@ func RunWindow(title string, width, height int, update UpdateFunction) error {
 		refreshRate = 60
 	}
 	updatesPerVsync := 60.0 / float32(refreshRate)
+	log("updates per VSync", updatesPerVsync)
 	nextUpdate := updatesPerVsync
 
 	// TODO right now we just assume that the refresh setting the DX9 gives us
@@ -244,6 +250,7 @@ func RunWindow(title string, width, height int, update UpdateFunction) error {
 	// refresh rate, then compensate for it
 
 	deviceIsLost := false
+	defer w32.ShowCursor(true)
 
 	var msg w32.MSG
 	w32.PeekMessage(&msg, 0, 0, 0, w32.PM_NOREMOVE)
@@ -253,25 +260,30 @@ func RunWindow(title string, width, height int, update UpdateFunction) error {
 			w32.DispatchMessage(&msg)
 		} else {
 			if deviceIsLost {
+				log("reset device")
 				_, err = device.Reset(presentParams)
 				if err == nil {
+					log("device was reset")
 					deviceIsLost = false
 					setRenderState()
 				}
 			}
 
 			if !deviceIsLost {
+				start := time.Now()
 				if err := device.BeginScene(); err != nil {
 					return err
 				}
 
 				var wasUpdated bool
+				n := 0
 				for nextUpdate > 0 {
 					// clear the screen to black before the update
 					globalWindow.FillRect(0, 0, width, height, Black)
 					update(globalWindow)
 					wasUpdated = true
 					nextUpdate -= 1
+					n++
 				}
 				nextUpdate += updatesPerVsync
 
@@ -295,6 +307,8 @@ func RunWindow(title string, width, height int, update UpdateFunction) error {
 				if wasUpdated {
 					globalWindow.finishFrame()
 				}
+
+				log(n, "updates in", time.Now().Sub(start))
 			}
 		}
 	}
@@ -348,6 +362,7 @@ type window struct {
 }
 
 func handleMessage(window w32.HWND, msg uint32, w, l uintptr) uintptr {
+	log("message", msg, w, l)
 	switch msg {
 	case w32.WM_INPUT:
 		raw, ok := w32.GetRawInputData(w32.HRAWINPUT(l), w32.RID_INPUT)
@@ -754,6 +769,7 @@ func (w *window) PlaySoundFile(path string) error {
 	}
 	source, ok := w.sounds[path]
 	if !ok {
+		log("loading sound", path)
 		f, err := OpenFile(path)
 		if err != nil {
 			return err
@@ -771,6 +787,7 @@ func (w *window) PlaySoundFile(path string) error {
 		}
 
 		w.sounds[path] = source
+		log("sound", path, "loaded")
 	}
 	source.PlayOnce()
 	return nil
@@ -829,6 +846,7 @@ func (w *window) loadFontTexture() error {
 }
 
 func (w *window) loadTexture(path string) error {
+	log("loading texture", path)
 	file, err := OpenFile(path)
 	if err != nil {
 		return err
@@ -884,6 +902,7 @@ func (w *window) createTexture(path string, img image.Image) error {
 		width:   nrgba.Bounds().Dx(),
 		height:  nrgba.Bounds().Dy(),
 	}
+	log("texture", path, "loaded")
 
 	return nil
 }
