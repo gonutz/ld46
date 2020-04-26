@@ -15,11 +15,11 @@ if errorlevel 1 (pause & exit)
 
 rsrc -ico icon.ico
 
-go build -ldflags="-s -w" -o LD46.exe
+go build -ldflags="-s -w" -o keep_the_rectangle_alive.exe
 if errorlevel 1 (pause & exit)
 
 blob -path=assets -out=assets.blob
 if errorlevel 1 (pause & exit)
 
-payload -data=assets.blob -exe=LD46.exe
+payload -data=assets.blob -exe=keep_the_rectangle_alive.exe
 if errorlevel 1 (pause & exit)

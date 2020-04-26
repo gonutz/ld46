@@ -1,7 +1,7 @@
 del assets.blob
 del icon.ico
 del rsrc.syso
-del LD46.exe
+del keep_the_rectangle_alive.exe
 del ico.exe
 del rsrc.exe
 del blob.exe

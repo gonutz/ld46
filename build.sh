@@ -11,7 +11,7 @@ go build ./vendor/github.com/gonutz/payload/cmd/payload
 ico assets/open_hand_cursor.png icon.ico
 rsrc -ico icon.ico
 
-go build -tags sdl2 -ldflags="-s -w" -o LD46
+go build -tags sdl2 -ldflags="-s -w" -o keep_the_rectangle_alive
 
 blob -path=assets -out=assets.blob
-payload -data=assets.blob -exe=LD46
+payload -data=assets.blob -exe=keep_the_rectangle_alive
