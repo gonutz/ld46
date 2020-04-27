@@ -271,16 +271,20 @@ func RunWindow(title string, width, height int, update UpdateFunction) error {
 
 			if !deviceIsLost {
 				start := time.Now()
+				begin := time.Now()
 				if err := device.BeginScene(); err != nil {
 					return err
 				}
+				log("BeginScene took", time.Now().Sub(begin))
 
 				var wasUpdated bool
 				n := 0
 				for nextUpdate > 0 {
 					// clear the screen to black before the update
 					globalWindow.FillRect(0, 0, width, height, Black)
+					a := time.Now()
 					update(globalWindow)
+					log("update", n, "took", time.Now().Sub(a))
 					wasUpdated = true
 					nextUpdate -= 1
 					n++
@@ -291,11 +295,15 @@ func RunWindow(title string, width, height int, update UpdateFunction) error {
 					return globalWindow.d3d9Error
 				}
 
+				end := time.Now()
 				if err := device.EndScene(); err != nil {
 					return err
 				}
+				log("EndScene took", time.Now().Sub(end))
+
 				windowW, windowH := globalWindow.Size()
 				r := &d3d9.RECT{0, 0, int32(windowW), int32(windowH)}
+				presentStart := time.Now()
 				if presentErr := device.Present(r, r, 0, nil); presentErr != nil {
 					if presentErr.Code() == d3d9.ERR_DEVICELOST {
 						deviceIsLost = true
@@ -303,6 +311,7 @@ func RunWindow(title string, width, height int, update UpdateFunction) error {
 						return presentErr
 					}
 				}
+				log("Present took", time.Now().Sub(presentStart))
 
 				if wasUpdated {
 					globalWindow.finishFrame()
@@ -764,6 +773,7 @@ func (w *window) DrawScaledText(text string, x, y int, scale float32, color Colo
 }
 
 func (w *window) PlaySoundFile(path string) error {
+	log("playing sound file", path)
 	if !w.soundOn {
 		return errors.New("sound mixer could not be initialized")
 	}
